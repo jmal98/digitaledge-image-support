@@ -1,0 +1,44 @@
+---      
+  - name: Install set of required packages for upgrading hue from tarball
+    apt: pkg={{ item }} state=installed update_cache=false
+    with_items:
+      - automake 
+      - build-essential
+      - python-dev
+      - python-setuptools
+      - python-simplejson
+      - libsqlite3-dev
+      - libxslt-dev
+      - libsasl2-dev
+      - libsasl2-modules-gssapi-mit
+      - libmysqlclient-dev
+      - libtidy-dev
+      
+  - name: Download Hue 2.5.0
+    shell: wget -O /tmp/hue-2.5.0.tgz "https://dl.dropboxusercontent.com/u/730827/hue/releases/2.5.0/hue-2.5.0.tgz"
+    
+  - name: Unpack Hue 2.5.0
+    unarchive: src=/tmp/hue-2.5.0.tgz dest=/tmp  
+  
+  - name: Prepare to build Hue 2.5.0
+    shell: rm -rf /usr/share/hue
+  
+  - name: Compile Hue 2.5.0
+    shell: export M2_HOME=/tmp/apache-maven-3.0.5; export PATH=$PATH:$M2_HOME/bin ; cd /tmp/hue-2.5.0 ; PREFIX=/usr/share make install
+    
+  - name: Setting permissions on hue root
+    shell: chown -R hue:hue /usr/share/hue
+  
+  - name: Setting permissions on hue setuid 
+    shell: chmod 4750 /usr/share/hue/apps/shell/src/shell/build/setuid
+  
+  - name: Setting permissions on hue root
+    shell: chown root:hue /usr/share/hue/apps/shell/src/shell/build/setuid
+    
+  - name: Removing hue apps not used/supported
+    shell: rm -rf /usr/share/hue/apps/search /usr/share/hue/apps/impala /usr/share/hue/apps/hbase
+    
+  - name: Cleanup Apache Maven
+    command: rm -rf /tmp/apache-maven-3.0.5/
+    args:
+      removes: /tmp/apache-maven-3.0.5/  

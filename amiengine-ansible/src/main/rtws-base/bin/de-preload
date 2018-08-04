@@ -1,0 +1,72 @@
+#!/bin/bash
+
+# Pre-load the docker environment for faster image builds
+# Assumed to be executing on the TMS API node
+
+source /etc/rtwsrc
+
+# Wait for Docker to become available
+echo "Checking the health of the Docker daemon...."
+service docker status | grep -c running
+x=$?
+while (( x != 0 ))
+do
+   sleep 1m
+   service docker status | grep -c running
+   x=$?
+done
+
+# Ensure container service scratch area exists and is writable by jetty which will use it for the repo.zip
+if [ ! -d /mnt/cs ]; then
+   mkdir -p /mnt/cs
+   chown jetty:jetty /mnt/cs
+fi
+
+docker pull centos:7.2.1511
+
+PLAYBOOK_SOURCE=/usr/local/rtws/container-playbooks/rtws-base
+
+SCRATCH="$1"
+RTWS_RELEASE="$2"
+RTWS_BUCKET="$RTWS_MOUNT_DEVICE"
+
+if [ ! -d $SCRATCH ]; then
+        echo "ERROR: $SCRATCH does not exist."
+fi
+
+if [[ -z $RTWS_BUCKET || -z $RTWS_RELEASE || -z $RTWS_SECRET_KEY || -z $RTWS_ACCESS_KEY ]]; then
+        echo "ERROR: missing one or more params."
+        exit 1
+fi
+
+cp -R /usr/local/rtws/container-playbooks/rtws-base $SCRATCH/.
+cd $SCRATCH/
+
+mv $SCRATCH/rtws-base/roles/Dockerfile_base_centos $SCRATCH/Dockerfile
+
+perl -i -pe "s:RTWS_BUCKET:$RTWS_BUCKET:g" rtws-base/site.yml
+perl -i -pe "s:RTWS_RELEASE:$RTWS_RELEASE:g" rtws-base/site.yml
+perl -i -pe "s:RTWS_SECRET_KEY:$RTWS_SECRET_KEY:g" rtws-base/site.yml
+perl -i -pe "s:RTWS_ACCESS_KEY:$RTWS_ACCESS_KEY:g" rtws-base/site.yml
+
+tar -C $SCRATCH/ -cvf $SCRATCH/rtws-base.tar rtws-base
+chown rtws:rtws $SCRATCH/rtws-base.tar 
+gzip  $SCRATCH/rtws-base.tar
+chown rtws:rtws $SCRATCH/rtws-base.tar.gz
+rm -rf  $SCRATCH/rtws-base
+
+docker build --rm=true --force-rm=true --tag digitaledge/base_image:latest $SCRATCH
+
+if [ $? -ne 0 ]; then
+        echo "ERROR building container."
+        rm -rf $SCRATCH/*
+        exit 1
+fi
+rm -rf $SCRATCH/*
+
+
+# Ensure container service scratch area exists and is writable by jetty which will use it for the repo.zip
+if [ ! -d /mnt/cs ]; then
+   mkdir -p /mnt/cs
+   chown jetty:jetty /mnt/cs
+fi

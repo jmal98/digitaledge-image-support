@@ -1,0 +1,34 @@
+#!/bin/bash
+
+SHUTDOWN=false
+
+_term() { 
+  printf "%s\n" "Caught SIGTERM signal!" 
+  kill -TERM $child 2>/dev/null
+  SHUTDOWN=true
+}
+
+trap _term 15
+
+_busywork() {
+	while [ "$SHUTDOWN" != "true" ]
+	do
+		sleep 1m
+	done
+	_gracefulShutdown
+}
+
+_gracefulShutdown() {
+	export RTWS_SHUTDOWN=true
+	ansible-playbook /tmp/.pbook/custom/site.yml -c local --tags "shutdown"
+}
+
+ansible-playbook /tmp/.pbook/custom/site.yml -c local --tags "pre-start"
+
+if [ $? -ne 0 ]; then
+   echo "Pre-start failed, exiting."
+   exit 1
+fi
+
+# simple hook to keep the successfully booted container running 
+_busywork

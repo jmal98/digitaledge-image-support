@@ -1,0 +1,11 @@
+FROM digitaledge/SYSTEM_RELEASE_AND_TAG_PLACEHOLDER
+
+RUN mkdir -p $PLAYBOOK
+
+ADD transport.tar.gz $PLAYBOOK/
+
+# blah blah blah
+
+WORKDIR /usr/local/rtws/transport/bin
+
+CMD ["/sbin/bootstrap"]	

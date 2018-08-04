@@ -1,0 +1,45 @@
+---
+  - stat: path=/usr/local/bin/openssl
+    register: openssl
+    
+  - name: Downloading Openssl Version 1.0.1j
+    get_url: url=http://www.openssl.org/source/old/1.0.1/openssl-1.0.1j.tar.gz dest=/tmp/openssl-1.0.1j.tar.gz
+    when: not openssl.stat.exists
+  
+  - name: Install Openssl compilation requirements
+    apt: pkg={{ item }} state=installed update_cache=true
+    with_items:
+      - build-essential
+    when: not openssl.stat.exists and ansible_distribution == 'Ubuntu'
+    
+  - name: Install Openssl compilation requirements (Using shell module because yum module does not handle groups)
+    shell: yum -y groupinstall "Development Tools"
+    when: not openssl.stat.exists and ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+    
+  - name: Unpack Openssl Version 1.0.1j
+    unarchive: src=/tmp/openssl-1.0.1j.tar.gz dest=/tmp
+    when: not openssl.stat.exists
+   
+  - name: Patch open 1.0.1j with Domain length change
+    replace: dest=/tmp/openssl-1.0.1j/crypto/asn1/a_strnid.c regexp='^(#define ub_common_name\s+64)'    replace='#define ub_common_name                  255' backup=no
+    when: not openssl.stat.exists
+    
+  - replace: dest=/tmp/openssl-1.0.1j/crypto/asn1/a_strnid.c regexp='^(#define ub_email_address\s+128)' replace='#define ub_email_address                255' backup=no
+    when: not openssl.stat.exists
+    
+  - name: Build/Install Openssl Version 1.0.1j
+    shell: ./config --prefix=/usr/local/bin/ssl --openssldir=/usr/local/bin/ssl/iopenssl ; make ; make test ; make install ; cp /usr/local/bin/ssl/bin/openssl /usr/local/bin
+    args:
+      chdir: /tmp/openssl-1.0.1j
+    when: not openssl.stat.exists
+   
+  - name: Cleanup Openssl Version 1.0.1j Download
+    shell: rm -fr /tmp/openssl-1.0.1j*
+    args:
+      removes: /tmp/openssl-1.0.1j.tar.gz
+    when: not openssl.stat.exists
+    
+  - name: Ensure CA directory exists for CentOS
+    file: path=/etc/pki/CA owner=root group=root mode=0775 state=directory recurse=yes
+    when: not openssl.stat.exists and ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+    

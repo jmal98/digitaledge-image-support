@@ -1,0 +1,18 @@
+---    
+  - unarchive: src={{ rtws_appfs }}/configuration/{{ rtws_domain }}/deleidos-rtws-activemq-conf.tar.gz dest=/usr/local/apache-activemq/conf
+  
+  - file: src=/usr/local/apache-activemq/conf/activemq-jms-int-node1.xml dest=/usr/local/apache-activemq/conf/activemq.xml owner=activemq group=activemq state=link force=yes
+  
+  - name: Temporary disable ssl connections until cert stuff is supported on appliance
+    lineinfile: dest=/usr/local/apache-activemq/conf/activemq.xml regexp="name=\"ssl\"" state=absent
+    
+  - lineinfile: dest=/usr/local/apache-activemq/conf/activemq.xml regexp="sslContext" state=absent
+  
+  - lineinfile: dest=/usr/local/apache-activemq/conf/activemq.xml regexp="</sslContext" state=absent
+  
+  - shell: cp /usr/local/apache-activemq/conf/webconsole-embedded.xml /usr/local/apache-activemq/webapps/admin/WEB-INF
+  
+  - copy: src=jmx_exporter.yml dest=/usr/local/apache-activemq/conf/jmx_exporter.yml owner=activemq group=activemq mode=0644 force=yes
+  
+  - name: Set ownership on ActiveMQ
+    command: chown -R activemq:activemq /usr/local/apache-activemq-{{ activemq_version }}

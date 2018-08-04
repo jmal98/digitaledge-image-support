@@ -1,0 +1,70 @@
+---
+# This playbook configures an ubuntu / centos image for use by DigitalEdge instances in AWS, EMIs for use in Eucalyptus
+# or the setup required to configure a docker container for use in appliance mode.  
+
+# Apply all roles for vm(s) used by DigitalEdge appliances.
+# Note tags are added to those components which can't be included/distributed and therefore need 
+# to be installed dynamically via tag specific execution
+# e.g.)  ansible-playbook site.yml -c local --tags "mongo,pentaho"
+- hosts: all
+  vars:
+    rtws_home: /usr/local/rtws
+    rtws_appfs: /mnt/appfs
+    rtws_release_bucket: RTWS_BUCKET
+    rtws_release: RTWS_RELEASE
+    aws_secret_key: RTWS_SECRET_KEY
+    aws_access_key: RTWS_ACCESS_KEY
+    # Note: rtws_system variable is only applicable if building for appliance use
+    rtws_system: RTWS_APPLIANCE_SYSTEM
+    enable_appliance_mode: true
+    enable_activemq: false
+    enable_mongo: false
+    enable_hadoop: false
+    enable_hue_upgrade: false
+    enable_cassandra: false
+    enable_elasticsearch: true
+    enable_docker: false
+    enable_pentaho: false
+    enable_expressionoasis: false
+    enable_gpl_jars: false
+    enable_hardening: false
+    enable_apache2: false
+    
+  roles:
+  # Default set of roles which should be run on all DE images/appliances
+  - { role: users, tags: ['users'] }
+  - { role: java, tags: ['java'] }  
+  - { role: nodejs, tags: ['nodejs'] }
+  - { role: s3cmd, tags: ['s3cmd'] }
+  - { role: boot-artifacts, tags: ['boot-artifacts'] }
+  
+  # Apply roles specific to Precise Ubuntu
+  - { role: openssl-1.0.1, when: ansible_distribution_release == 'precise' or ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat', tags: ['openssl'] }
+  
+  # Enable roles to install enrichment/datasink specific components when required
+  - { role: activemq, when: enable_activemq, tags: ['activemq'] }
+  - { role: expressionoasis, when: enable_expressionoasis, tags: ['expressionoasis'] }
+  - { role: mongo, when: enable_mongo, tags: [ 'mongo' ] }
+  - { role: hadoop, when: enable_hadoop, tags: ['hadoop']  }
+  - { role: upgrade_hue, when: enable_hue_upgrade, tags: ['upgrade_hue'] }
+  - { role: cassandra, when: enable_cassandra, tags: ['cassandra']}
+  - { role: elasticsearch, when: enable_elasticsearch, tags: ['elasticsearch'] }
+  - { role: gpl-jars, when: enable_gpl_jars, tags: ['gpl-jars'] }  
+  - { role: apache-http, when: enable_apache2, tags: ['apache-http'] }
+   
+  # Apply roles specific to appliance image/container creation
+  - { role: docker, when: enable_docker, tags: ['docker'] }
+  
+  # Enable the addition of the system's configuration/models for appliance mode usage
+  - { role: release, when: enable_appliance_mode }  
+  - { role: models, when: enable_appliance_mode }
+  - { role: configuration, when: enable_appliance_mode }  
+  
+  # Enable roles to install specific web applications
+  - { role: pentaho, when: enable_pentaho, tags: ['pentaho'] }
+  
+  # Harden when ready
+  - { role: harden, when: enable_hardening }
+  
+  # Cleanup
+  - { role: cleanup, tags: ['cleanup'] }

@@ -1,0 +1,141 @@
+#!/bin/bash
+
+_term() { 
+  printf "%s\n" "Caught SIGTERM signal!" 
+  kill -TERM $child 2>/dev/null
+  SHUTDOWN=true
+}
+
+trap _term 15
+
+
+_busywork() {
+	while [ "$SHUTDOWN" != "true" ]
+	do
+		netstat -an | grep -i LISTEN | grep 8161
+    
+    	if [ $? -eq 0 ]; then
+        	sleep 1m
+    	else
+        	if [ "$wait" == ".................." ]; then
+            	echo "H2 Database is not listening on port 8161"
+            	exit 1
+        	else
+            	wait="$wait""."
+            	sleep 5
+        	fi
+    	fi
+	done
+	_gracefulShutdown
+}
+
+_gracefulShutdown() {
+	export RTWS_SHUTDOWN=true
+	# Taken from anchor.ini as the graceful way to shutdown the h2 DB which uses the DB wrapper
+	touch /usr/local/rtws/commons-core/bin/boot/STOP_H2
+	sleep 2m
+}
+
+DATA_DIR=/mnt/rdafs
+LOG_DIR="/usr/local/rtws/h2logs"
+
+find /mnt/appfs -name DatabaseWrapper.jar | xargs -n 1 -I {} cp -fv {} /usr/local/rtws/commons-core/lib/.
+
+
+cp=`echo /usr/local/rtws/commons-core/lib/h2* | tr -s ' ' ';'`
+
+if [ -n "$H2DRIVERS" ] ; then
+  cp="$cp:$H2DRIVERS"
+fi
+
+if [ -n "$CLASSPATH" ] ; then
+  cp="$cp:$CLASSPATH"
+fi
+
+cp="$cp:/usr/local/rtws/commons-core/lib/DatabaseWrapper.jar:/usr/local/rtws/commons-core/lib/deleidos-rtws-commons-core.jar"
+echo "CLASSPATH: $cp"
+
+totalMemory=`free -m | grep "^Mem" | awk '{print $2}'`
+if [ ! -z $RTWS_CONTAINER_MAX_MEMORY ]; then
+	echo "Using $RTWS_CONTAINER_MAX_MEMORY for total memory available."
+	totalMemory=$RTWS_CONTAINER_MAX_MEMORY
+fi
+h2Memory=`expr \( $totalMemory \* 50 \) / 100`
+letterM=m
+javaMemStart=$h2Memory$letterM
+javaMemMax=$h2Memory$letterM
+firstboot=0
+
+# Creation has to be done here since /mnt/rdafs is there at runtime
+MOUNT_DIR="$DATA_DIR/h2db"
+if [ ! -d "$MOUNT_DIR" ] ; then
+    firstboot=1
+    mkdir -p $MOUNT_DIR
+    chown rtws:rtws $MOUNT_DIR
+    chmod 0700 $MOUNT_DIR
+fi
+
+java -server -Xms$javaMemStart -Dh2.serverResultSetFetchSize=1000 -Xmx$javaMemMax -cp $cp com.deleidos.rtws.db.Wrapper -tcpPort 8161 -tcpAllowOthers -baseDir $MOUNT_DIR > $LOG_DIR/h2console.log 2>&1 &
+
+echo "Waiting for database ..."
+while [ 1 ]
+do
+    netstat -an | grep -i LISTEN | grep 8161
+    
+    if [ $? -eq 0 ]; then
+        break
+    else
+        if [ "$wait" == ".................." ]; then
+            echo "H2 Database is not listening on port 8161"
+            exit 1
+        else
+            wait="$wait""."
+            sleep 5
+        fi
+    fi
+done
+
+if [ $firstboot -eq 1  ] ; then
+    if [ -z $IGNORE_SCHEMAS ]; then    	
+    	# Add the schemas to the h2 database
+    	echo "Creating schema ..."
+    	java -cp $cp org.h2.tools.RunScript -url jdbc:h2:tcp://127.0.0.1:8161/commondb -user sa -script h2_create_schemas.sql
+    
+    	# Add users to the h2 database
+    	echo "Creating users ..."
+    	java -cp $cp org.h2.tools.RunScript -url jdbc:h2:tcp://127.0.0.1:8161/commondb -user sa -script h2_create_users.sql
+    fi
+fi
+
+source /etc/rtwsrc
+
+GW_USER_DATA=RTWS_IS_GATEWAY
+GW_FLAG=`grep $GW_USER_DATA /etc/rtwsrc | cut -d'=' -f2`
+if [[ ! -z "$GW_FLAG" && $GW_FLAG == "true" ]]; then
+    echo "Configuring gateway's h2 database settings ..."
+    java -cp $cp org.h2.tools.RunScript -url jdbc:h2:tcp://127.0.0.1:8161/commondb -user sa -password redacted -script h2_configure_settings.sql
+fi
+
+# If this is a single tms in a box, initialize the DB with the required tables
+if [ $firstboot -eq 1  ] ; then
+    if [ "$RTWS_IS_SINGLE_TMS" == "true" ]; then    	
+    	for s in all/h2_create_users.sql all/h2_create_schemas.sql tms/h2_create_tms_tables.sql tms/h2_create_tms_indexes.sql tms/h2_create_sequences.sql tms/h2_grants_for_appuser.sql
+    	do
+    		echo "Executing $s..."
+    		java -cp $cp org.h2.tools.RunScript -url jdbc:h2:tcp://127.0.0.1:8161/commondb -user sa -password redacted -script /usr/local/rtws/system-database/$s
+    	done
+    	
+    	echo "Executing load_for_single_tms.sql"
+    	java -cp $cp org.h2.tools.RunScript -url jdbc:h2:tcp://127.0.0.1:8161/commondb -user sa -password redacted -script /usr/local/rtws/system-database/tms/load_for_single_tms.sql  	
+    fi
+fi
+
+# If this is a container, assume appliance mode and run dimension table setup scripts in absence of Table Manager
+if [ ! -z $RTWS_CONTAINER_MAX_MEMORY ]; then
+	java -cp $cp org.h2.tools.RunScript -url jdbc:h2:tcp://127.0.0.1:8161/commondb -user sa -password redacted -script h2_create_dimensions_for_appliance.sql
+	echo "It's ok.... :)"
+fi
+
+
+# pool and keep alive as long as the H2 DB is running
+_busywork

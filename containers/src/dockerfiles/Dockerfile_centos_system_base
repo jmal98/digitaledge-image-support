@@ -1,0 +1,38 @@
+# Setup a base image for use by those containers which require
+# system specific setup (e.g. gateway, transport, ingest, etc...)
+FROM centos:7.2.1511
+
+RUN yum -y install \
+		file \
+		gcc \
+		gzip \
+		libffi-devel \
+		make \
+		openssl-devel \
+		python-devel \
+		python-yaml \
+		python-setuptools \
+		tar && \
+	easy_install setuptools==30.1.0 && \
+	easy_install \
+		ansible==1.9.3 \
+		awscli==1.11.163 \
+		boto==2.38.0 \
+		pysphere==0.1.7 && \
+	mkdir -p /etc/ansible && \
+	chmod 755 /etc/ansible ; echo '127.0.0.1' > /etc/ansible/hosts && \
+	yum -y remove \
+		gcc \
+		make && \
+	yum -y clean all
+
+ENV PLAYBOOK=/tmp/.pbook
+
+RUN mkdir -p $PLAYBOOK
+
+ADD system-base.tar.gz $PLAYBOOK/
+
+ADD params.yml $PLAYBOOK/system-base/
+
+RUN ansible-playbook $PLAYBOOK/system-base/site.yml -c local --vault-password-file $PLAYBOOK/system-base/v && \
+	rm -rf $PLAYBOOK

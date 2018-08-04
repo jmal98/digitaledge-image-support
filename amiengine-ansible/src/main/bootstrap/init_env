@@ -1,0 +1,39 @@
+#!/usr/bin/env python
+
+import os
+import subprocess
+import urllib
+import zipfile
+from subprocess import Popen, STDOUT
+
+def setup():
+    print 'Preparing to install required dependencies'
+    proc = subprocess.Popen('apt-get -y update', shell=True, stdin=None, stdout=open(os.devnull,"wb"), stderr=STDOUT, executable="/bin/bash")
+    if proc.wait() != 0:
+        print proc.communicate()
+        raise Exception('Failed to prepare to install required dependencies')
+    
+    print 'Installing required dependencies'
+    proc = subprocess.Popen('apt-get install -y tofrodos curl python-setuptools python-pip ssh openjdk-6-jdk python-dev gcc', shell=True, stdin=None, stdout=open(os.devnull,"wb"), stderr=STDOUT, executable="/bin/bash")
+    if proc.wait() != 0:
+        print proc.communicate()
+        raise Exception('Failed to install required dependencies')
+    
+    print 'Installing ansible and its required dependencies'    
+    proc = subprocess.Popen('pip install paramiko PyYAML jinja2 httplib2 ansible==1.7.2 boto pysphere', shell=True, stdin=None, stdout=open(os.devnull,"wb"), stderr=STDOUT, executable="/bin/bash")
+    proc.wait()
+    if proc.wait() != 0:
+        raise Exception('Failed to install required dependencies')
+        
+    proc = subprocess.Popen('mkdir -p /etc/ansible ; chown 755 /etc/ansible ; echo \'127.0.0.1\' > /etc/ansible/hosts', shell=True, stdin=None, stdout=open(os.devnull,"wb"), stderr=STDOUT, executable="/bin/bash")
+    proc.wait()
+    if proc.wait() != 0:
+        raise Exception('Failed to change permissions on ansbile release')
+    
+    print 'Bootstrap complete.  Execute the following command to verify all is well with the ansible setup: ansible -m ping all --connection=local'
+    print 'Also, execute the following before running any playbook which installs/configures packages with java dependencies: export JAVA_HOME=/usr/lib/jvm/java-6-openjdk-amd64/'
+
+
+# Main
+if __name__ == '__main__':
+    setup()

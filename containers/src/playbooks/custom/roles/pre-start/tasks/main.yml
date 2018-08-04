@@ -1,0 +1,24 @@
+---
+  - include: rtwsrc.yml
+  
+  #- include: config_modifications.yml  
+  
+  - shell: /usr/local/rtws/commons-core/bin/boot/init_arbitrary_pg.sh
+    async: 0
+    poll: 0
+    sudo: yes
+    sudo_user: rtws
+
+  - shell: /usr/local/rtws/commons-core/bin/boot/packages_arbitrary_pg.sh
+
+  - shell: /usr/local/rtws/commons-core/bin/boot/setup_arbitrary_pg.sh
+    async: 0
+    poll: 0
+    sudo: yes
+    sudo_user: rtws  
+    
+  - shell: /usr/local/rtws/commons-core/bin/boot/start_arbitrary_pg.sh
+    async: 0
+    poll: 0
+    sudo: yes
+    sudo_user: rtws

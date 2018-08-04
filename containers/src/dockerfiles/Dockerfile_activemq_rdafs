@@ -1,0 +1,8 @@
+FROM centos:7.2.1511
+
+RUN groupadd -g 1004 activemq \
+	&& useradd --shell /bin/bash --system -g 1004 -u 1004 activemq \
+	&& mkdir -p /mnt/rdafs /home/activemq \
+	&& chown -R activemq:activemq /mnt/rdafs /home/activemq
+
+VOLUME ["/mnt/rdafs"]

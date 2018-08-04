@@ -1,0 +1,457 @@
+---
+  - name: Install packages required for hardening settings
+    apt: pkg={{ item }} state=installed update_cache=false
+    with_items:
+      - libpam-cracklib
+      
+  - name: 2.17 Set Sticky Bit on All World-Writable Directories (Scored)
+    shell: df --local -P | awk {'if (NR!=1) print $6'} | xargs -I '{}' find '{}' -xdev -type d -perm -0002 2>/dev/null | xargs chmod a+t
+    
+  - name:  7.7 Ensure Firewall is in-active
+    lineinfile: line="IPT_SYSCTL=/etc/sysctl.conf" dest=/etc/ufw/sysctl.conf
+  
+  - name: 2.23 Disable Mounting of squashfs Filesystems
+    lineinfile: line="install squashfs /bin/true" dest=/etc/modprobe.d/CIS.conf create=yes
+  
+  - name: 2.24 Disable Mounting of udf Filesystems
+    lineinfile: line="install udf /bin/true" dest=/etc/modprobe.d/CIS.conf create=yes
+  
+  - name: 3.2 Set Permissions on bootloader config
+    shell: chmod og-rwx /boot/grub/grub.cfg
+  
+  - name: 4.1 Restrict Core Dumps
+    lineinfile: line="* hard core 0" dest=/etc/security/limits.conf
+    
+  - sysctl: name=fs.suid_dumpable value=0 state=present sysctl_set=yes reload=no 
+  
+  - name: 7.1.2 Disable Send Packet Redirects
+    sysctl: name=net.ipv4.conf.all.send_redirects value=0 state=present sysctl_set=yes reload=no
+    
+  #- sysctl: name=net.ipv4.default.all.send_redirects value=0 state=present sysctl_set=yes reload=no ignoreerrors=yes
+    
+  - sysctl: name=net.ipv4.route.flush value=1 state=present sysctl_set=yes reload=no
+  
+  - name: 7.2.1 Disable Source Routed Packet Acceptance
+    sysctl: name=net.ipv4.conf.all.accept_source_route value=0 state=present sysctl_set=yes reload=no
+    
+  - sysctl: name=net.ipv4.conf.default.accept_source_route value=0 state=present sysctl_set=yes reload=no
+    
+  - sysctl: name=net.ipv4.route.flush value=1 state=present sysctl_set=yes reload=no
+  
+  - name: 7.2.2 Disable ICMP Redirect Acceptance
+    sysctl: name=net.ipv4.conf.all.accept_redirects value=0 state=present sysctl_set=yes reload=no
+    
+  - sysctl: name=net.ipv4.conf.default.accept_redirects value=0 state=present sysctl_set=yes reload=no
+    
+  - sysctl: name=net.ipv4.route.flush value=1 state=present sysctl_set=yes reload=no
+  
+  - name: 7.2.3 Disable Secure ICMP Redirect Acceptance
+    sysctl: name=net.ipv4.conf.all.secure_redirects value=0 state=present sysctl_set=yes reload=no
+    
+  - sysctl: name=net.ipv4.conf.default.secure_redirects value=0 state=present sysctl_set=yes reload=no
+    
+  - sysctl: name=net.ipv4.route.flush value=1 state=present sysctl_set=yes reload=no
+  
+  - name: 7.2.4 Log Suspicious Packets
+    sysctl: name=net.ipv4.conf.all.log_martians value=1 state=present sysctl_set=yes reload=no
+    
+  - sysctl: name=net.ipv4.conf.default.log_martians value=1 state=present sysctl_set=yes reload=no
+    
+  - sysctl: name=net.ipv4.route.flush value=1 state=present sysctl_set=yes reload=no
+  
+  - name: 7.2.5 Enable Ignore Broadcast Requests
+    sysctl: name=net.ipv4.icmp_echo_ignore_broadcasts value=1 state=present sysctl_set=yes reload=no
+    
+  - sysctl: name=net.ipv4.route.flush value=1 state=present sysctl_set=yes reload=no
+  
+  - name: 7.2.6 Enable Bad Error Message Protection
+    sysctl: name=net.ipv4.icmp_ignore_bogus_error_responses value=1 state=present sysctl_set=yes reload=no
+    
+  - sysctl: name=net.ipv4.route.flush value=1 state=present sysctl_set=yes reload=no
+   
+  - name: 7.2.7 Enable RFC-recommended Source Route Validation
+    sysctl: name=net.ipv4.conf.all.rp_filter value=1 state=present sysctl_set=yes reload=no
+    
+  - sysctl: name=net.ipv4.conf.default.rp_filter value=1 state=present sysctl_set=yes reload=no
+    
+  - sysctl: name=net.ipv4.route.flush value=1 state=present sysctl_set=yes reload=no
+  
+  - name: 7.2.8 Enable TCP SYN Cookies
+    sysctl: name=net.ipv4.tcp_syncookies value=1 state=present sysctl_set=yes reload=no
+    
+  - sysctl: name=net.ipv4.route.flush value=1 state=present sysctl_set=yes reload=no
+  
+  - name: 7.3.1 Disable IPv6 Router Advertisements
+    sysctl: name=net.ipv6.conf.all.accept_ra value=0 state=present sysctl_set=yes reload=no
+    
+  - sysctl: name=net.ipv6.conf.default.accept_ra value=0 state=present sysctl_set=yes reload=no
+    
+  - sysctl: name=net.ipv6.route.flush value=1 state=present sysctl_set=yes reload=no
+  
+  - name: 7.3.2 Disable IPv6 Redirect Acceptance
+    sysctl: name=net.ipv6.conf.all.accept_redirects value=0 state=present sysctl_set=yes reload=no
+    
+  - sysctl: name=net.ipv6.conf.default.accept_redirects value=0 state=present sysctl_set=yes reload=no
+    
+  - sysctl: name=net.ipv6.route.flush value=1 state=present sysctl_set=yes reload=no
+  
+  - name: 7.3.3 Disable IPv6
+    sysctl: name=net.ipv6.conf.all.disable_ipv6 value=1 state=present sysctl_set=yes reload=no
+    
+  - sysctl: name=net.ipv6.conf.default.disable_ipv6 value=1 state=present sysctl_set=yes reload=no
+    
+  - sysctl: name=net.ipv6.conf.lo.disable_ipv6 value=1 state=present sysctl_set=yes reload=no
+  
+  - name: 7.5.1 Disable DCCP
+    lineinfile: line="install dccp /bin/true" dest=/etc/modprobe.d/CIS.conf create=yes
+  
+  - name: 7.5.2 Disable SCTP
+    lineinfile: line="install sctp /bin/true" dest=/etc/modprobe.d/CIS.conf create=yes
+  
+  - name: 7.5.3 Disable RDS
+    lineinfile: line="install rds /bin/true" dest=/etc/modprobe.d/CIS.conf create=yes
+  
+  - name: 7.5.4 Disable TIPC
+    lineinfile: line="install tipc /bin/true" dest=/etc/modprobe.d/CIS.conf create=yes
+  
+  - name: Install auditd
+    apt: pkg=auditd state=installed update_cache=true
+     
+  - name: 8.1.1.2 Disable System on Audit Log Full
+    shell: sed -i 's/space_left_action = SYSLOG/space_left_action = email/' /etc/audit/auditd.conf
+    
+  - shell: sed -i 's/admin_space_left_action = SUSPEND/admin_space_left_action = halt/' /etc/audit/auditd.conf
+  
+  - name: 8.1.1.3 Keep All Auditing Information
+    shell: sed -i 's/max_log_file_action = ROTATE/max_log_file_action = keep_logs/' /etc/audit/auditd.conf
+  
+  - name: 8.1.3 Enable Auditing for Processes That Start Prior to auditd
+    shell: sed -i 's/GRUB_CMDLINE_LINUX=""/GRUB_CMDLINE_LINUX="audit=1"/' /etc/default/grub
+    
+  - shell: update-grub
+  
+  - name: 8.1.4 Record Events That Modify Date and Time Information
+    lineinfile: line="-a always,exit -F arch=b64 -S adjtimex -S settimeofday -k time-change" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F arch=b32 -S adjtimex -S settimeofday -S stime -k time-change" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F arch=b64 -S clock_settime -k time-change" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F arch=b32 -S clock_settime -k time-change -w /etc/localtime -p wa -k time-change" dest=/etc/audit/audit.rules
+    
+  - shell: pkill -HUP -P 1 auditd
+  
+  - name: 8.1.5 Record Events That Modify User/Group Information
+    lineinfile: line="-w /etc/group -p wa -k identity" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-w /etc/passwd -p wa -k identity" dest=/etc/audit/audit.rules 
+    
+  - lineinfile: line="-w /etc/gshadow -p wa -k identity" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-w /etc/shadow -p wa -k identity" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-w /etc/security/opasswd -p wa -k identity" dest=/etc/audit/audit.rules
+    
+  - shell: pkill -HUP -P 1 auditd
+  
+  - name: 8.1.6 Record Events That Modify the System's Network Environment
+    lineinfile: line="-a exit,always -F arch=b64 -S sethostname -S setdomainname -k system-locale" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a exit,always -F arch=b32 -S sethostname -S setdomainname -k system-locale" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-w /etc/issue -p wa -k system-locale" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-w /etc/issue.net -p wa -k system-locale" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-w /etc/hosts -p wa -k system-locale" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-w /etc/network -p wa -k system-locale" dest=/etc/audit/audit.rules
+  
+  - name: 8.1.7 Record Events That Modify the System's Mandatory Access Controls
+    lineinfile: line="-w /etc/selinux/ -p wa -k MAC-policy" dest=/etc/audit/audit.rules
+    
+  - shell: pkill -HUP -P 1 auditd
+  
+  - name: 8.1.8 Collect Login and Logout Events
+    lineinfile: line="-w /var/log/faillog -p wa -k logins" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-w /var/log/lastlog -p wa -k logins" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-w /var/log/tallylog -p wa -k logins" dest=/etc/audit/audit.rules
+  
+  - name: 8.1.9 Collect Session Initiation Information
+    lineinfile: line="-w /var/run/utmp -p wa -k session" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-w /var/log/wtmp -p wa -k session" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-w /var/log/btmp -p wa -k session" dest=/etc/audit/audit.rules
+  
+  - name: 8.1.10 Collect Discretionary Access Control Permission Modification Events
+    lineinfile: line="-a always,exit -F arch=b64 -S chmod -S fchmod -S fchmodat -F auid>=500 -F auid!=4294967295 -k perm_mod" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F arch=b32 -S chmod -S fchmod -S fchmodat -F auid>=500 -F auid!=4294967295 -k perm_mod" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F arch=b64 -S chown -S fchown -S fchownat -S lchown -F auid>=500 -F auid!=4294967295 -k perm_mod" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F arch=b32 -S chown -S fchown -S fchownat -S lchown -F auid>=500 -F auid!=4294967295 -k perm_mod" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F arch=b64 -S setxattr -S lsetxattr -S fsetxattr -S removexattr -S lremovexattr -S fremovexattr -F auid>=500 -F auid!=4294967295 -k perm_mod" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F arch=b32 -S setxattr -S lsetxattr -S fsetxattr -S removexattr -S lremovexattr -S fremovexattr -F auid>=500 -F auid!=4294967295 -k perm_mod" dest=/etc/audit/audit.rules
+  
+  - name: 8.1.11 Collect Unsuccessful Unauthorized Access Attempts to Files
+    lineinfile: line="-a always,exit -F arch=b64 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EACCES -F auid>=500 -F auid!=4294967295 -k access" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F arch=b32 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EACCES -F auid>=500 -F auid!=4294967295 -k access" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F arch=b64 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EPERM -F auid>=500 -F auid!=4294967295 -k access" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F arch=b32 -S creat -S open -S openat -S truncate -S ftruncate -F exit=-EPERM -F auid>=500 -F auid!=4294967295 -k access" dest=/etc/audit/audit.rules
+  
+  - name: 8.1.12 Collect Use of Privileged Commands
+    lineinfile: line="-a always,exit -F path=/bin/fusermount -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/bin/mount -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/bin/umount -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/bin/su -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/bin/ping -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/bin/ping6 -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/bin/chsh -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/bin/wall -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/bin/newgrp -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/bin/sudoedit -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/bin/mail-touchlock -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/bin/mail-lock -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/bin/passwd -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/bin/gpasswd -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/bin/chfn -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+      
+  - lineinfile: line="-a always,exit -F path=/usr/bin/sudo -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/bin/ssh-agent -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/bin/traceroute6.iputils -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/bin/at -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/bin/screen -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/bin/dotlockfile -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/bin/expiry -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/bin/bsd-write -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/bin/mtr -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/bin/crontab -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/bin/mlocate -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/bin/arping -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/bin/mail-unlock -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/bin/chage -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/lib/landscape/apt-update -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/lib/dbus-1.0/dbus-daemon-launch-helper -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/lib/hadoop-yarn/bin/container-executor -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/lib/eject/dmcrypt-get-device -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/lib/hadoop-0.20-mapreduce/sbin/Linux-amd64-64/task-controller -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/lib/openssh/ssh-keysign -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+   
+  - lineinfile: line="-a always,exit -F path=/usr/lib/pt_chown -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/sbin/pppd -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/sbin/postdrop -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/sbin/postqueue -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/usr/sbin/uuidd -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/sbin/unix_chkpwd -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F path=/sbin/mount.nfs -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+   
+  - lineinfile: line="-a always,exit -F path=/sbin/mount.ecryptfs_private -F perm=x -F auid>=500 -F auid!=4294967295 -k privileged" dest=/etc/audit/audit.rules
+  
+  - name: 8.1.13 Collect Successful File System Mounts
+    lineinfile: line="-a always,exit -F arch=b64 -S mount -F auid>=500 -F auid!=4294967295 -k mounts" dest=/etc/audit/audit.rules
+  - lineinfile: line="-a always,exit -F arch=b32 -S mount -F auid>=500 -F auid!=4294967295 -k mounts" dest=/etc/audit/audit.rules
+  
+  - name: 8.1.14 Collect File Deletion Events by User
+    lineinfile: line="-a always,exit -F arch=b64 -S unlink -S unlinkat -S rename -S renameat -F auid>=500 -F auid!=4294967295 -k delete" dest=/etc/audit/audit.rules
+    
+  - lineinfile: line="-a always,exit -F arch=b32 -S unlink -S unlinkat -S rename -S renameat -F auid>=500 -F auid!=4294967295 -k delete" dest=/etc/audit/audit.rules
+  
+  - shell: pkill -HUP -P 1 auditd
+  
+  - name: 8.1.15 Collect Changes to System Administration Scope
+    lineinfile: line="-w /etc/sudoers -p wa -k scope" dest=/etc/audit/audit.rules
+  
+  - name: 8.1.16 Collect System Administrator Actions
+    lineinfile: line="-w /var/log/sudo.log -p wa -k actions" dest=/etc/audit/audit.rules
+  
+  - name: 8.1.17 Collect Kernel Module Loading and Unloading
+    lineinfile: line="-w /sbin/insmod -p x -k modules" dest=/etc/audit/audit.rules
+  
+  - lineinfile: line="-w /sbin/rmmod -p x -k modules" dest=/etc/audit/audit.rules
+  
+  - lineinfile: line="-w /sbin/modprobe -p x -k modules" dest=/etc/audit/audit.rules
+ 
+  - lineinfile: line="-a always,exit arch=b64 -S init_module -S delete_module -k modules" dest=/etc/audit/audit.rules
+  
+  - name: 8.1.18 Make the Audit Configuration Immutable
+    lineinfile: line="-e 2" dest=/etc/audit/audit.rules
+  
+   #-name: 8.2.4 Create and Set Permissions on rsyslog Log
+   #-name: 8.2.4 Create and Set Permissions on rsyslog Log Files
+   #-name: 8.2.5 Configure rsyslog to Send Logs to a Remote Log Host (Scored)
+   #-name: 8.2.6 Accept Remote rsyslog Messages Only on Designated Log Hosts
+  
+  - name: 8.3.1 Install AIDE
+    apt: pkg=aide state=installed update_cache=true
+  
+  - name: 8.3.2 Implement Periodic Execution of File Integrity
+    cron: name="Periodic Execution of File Integrity" minute="0" hour="5" job="/usr/sbin/aide --check" user="root"
+  
+  #- name: 8.4 Configure logrotate
+  
+  - name: 9.1.2 Set User/Group Owner and Permission on /etc/crontab
+    shell: chown root:root /etc/crontab
+  
+  - shell: chmod og-rwx /etc/crontab
+  
+  - name: 9.1.3 Set User/Group Owner and Permission on /etc/cron.hourly
+    shell: chown root:root /etc/cron.hourly
+  
+  - shell: chmod og-rwx /etc/cron.hourly
+  
+  - name: 9.1.4 Set User/Group Owner and Permission on /etc/cron.daily
+    shell: chown root:root /etc/cron.daily
+  
+  - shell: chmod og-rwx /etc/cron.daily
+  
+  - name: 9.1.5 Set User/Group Owner and Permission on /etc/cron.weekly
+    shell: chown root:root /etc/cron.weekly
+  
+  - shell: chmod og-rwx /etc/cron.weekly
+  
+  - name: 9.1.6 Set User/Group Owner and Permission on /etc/cron.monthly
+    shell: chown root:root /etc/cron.monthly
+  
+  - shell: chmod og-rwx /etc/cron.monthly
+  
+  - name: 9.1.7 Set User/Group Owner and Permission on /etc/cron.d
+    shell: chown root:root /etc/cron.d
+  
+  - shell: chmod og-rwx /etc/cron.d
+  
+  - name: 9.1.8 Restrict at/cron to Authorized Users
+    command: /bin/rm /etc/cron.deny
+    args:
+      removes: /etc/cron.deny 
+  
+  - command: /bin/rm /etc/at.deny
+    args:
+      removes: /etc/at.deny
+      
+  - command: touch /etc/cron.allow
+    args:
+      creates: /etc/cron.allow 
+  
+  - command: touch /etc/at.allow
+    args:
+      creates: /etc/at.allow
+  
+  - shell: chmod og-rwx /etc/cron.allow
+  
+  - shell: chmod og-rwx /etc/at.allow
+  
+  -  shell: chown root:root /etc/cron.allow
+  
+  - shell: chown root:root /etc/at.allow
+  
+  - name: 9.2.1 Set Password Creation Requirement Parameters Using pam_cracklib
+    lineinfile: line="password required pam_cracklib.so retry=3 minlen=14 dcredit=-1 ucredit=-1 ocredit=-1 lcredit=-1" dest=/etc/pam.d/common-password
+  
+  - name: 9.2.2 Set Lockout for Failed Password Attempts
+    lineinfile: line="auth required pam_tally2.so onerr=fail audit silent deny=5 unlock_time=900" dest=/etc/pam.d/login
+  
+  - name: 9.2.3 Limit Password Reuse
+    lineinfile: line="password sufficient pam_unix.so remember=5" dest=/etc/pam.d/common-password
+  
+  - name: 9.3.3 Set Permissions on /etc/ssh/sshd_config
+    shell: chmod 600 /etc/ssh/sshd_config
+  
+  - name: 9.3.4 Disable SSH X11 Forwarding
+    shell: sed -i 's/X11Forwarding yes/X11Forwarding no/' /etc/ssh/sshd_config
+  
+  - name: 9.3.5 Set SSH MaxAuthTries to 4 or Less
+    lineinfile: line="MaxAuthTries 4" dest=/etc/ssh/sshd_config
+  
+  - name: 9.3.8 Disable SSH Root Login
+    shell: sed -i 's/PermitRootLogin yes/PermitRootLogin no/' /etc/ssh/sshd_config
+  
+  - name: 9.3.10 Do Not Allow Users to Set Environment Options
+    lineinfile: line="PermitUserEnvironment no" dest=/etc/ssh/sshd_config
+  
+  - name: 9.3.11 Use Only Approved Cipher in Counter Mode
+    lineinfile: line="Ciphers aes128-ctr,aes192-ctr,aes256-ctr" dest=/etc/ssh/sshd_config
+  
+  - name: 9.3.12 Set Idle Timeout Interval for User Login
+    lineinfile: line="ClientAliveInterval 1800" dest=/etc/ssh/sshd_config
+  
+  - lineinfile: line="ClientAliveCountMax 0" dest=/etc/ssh/sshd_config
+  
+  - name: 9.3.13 Limit Access via SSH for ubuntu user
+    lineinfile: line="AllowUsers ubuntu" dest=/etc/ssh/sshd_config
+    when: ansible_distribution == 'Ubuntu'
+
+  - name: 9.3.13 Limit Access via SSH for centos user
+    lineinfile: line="AllowUsers centos" dest=/etc/ssh/sshd_config
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+  
+  - name: 9.3.14 Set SSH Banner
+    lineinfile: line="Banner /etc/issue.net" dest=/etc/ssh/sshd_config
+  
+  - name: 9.3.14 Populate SSH banner Message Text
+    template: src=issue.j2 dest=/etc/issue.net owner=root group=root mode=0444
+  
+  - name: 10.1.1 Delete old Password Expiration Days
+    shell: sed -i '/PASS_MAX_DAYS/d' /etc/login.defs
+  
+  - name: 10.1.1 Set Password Expiration Days
+    lineinfile: line="PASS_MAX_DAYS 90" dest=/etc/login.defs
+  
+  - name: 10.1.2 Delete old Password Change Minimum Number of Days
+    shell: sed -i '/PASS_MIN_DAYS/d' /etc/login.defs
+  
+  - name: 10.1.2 Set Password Change Minimum Number of Days
+    lineinfile: line="PASS_MIN_DAYS 7" dest=/etc/login.defs
+  
+  - name: 10.5 Lock Inactive User Accounts
+    shell: useradd -D -f 35
+  
+  - name: 11.1 Set Warning Banner for Standard Login Services
+    template: src=motd.j2 dest=/var/run/motd owner=root group=root mode=0444

@@ -1,0 +1,24 @@
+---
+  - shell: gpg --keyserver pgp.mit.edu --recv-keys F758CE318D77295D
+      
+  - shell: gpg --export --armor F758CE318D77295D | sudo apt-key add -
+    
+  - shell: gpg --keyserver pgp.mit.edu --recv-keys 2B5C1B00
+      
+  - shell: gpg --export --armor 2B5C1B00 | sudo apt-key add -
+  
+  - name: Configuring the Cassandra ubuntu  / centos repos
+    apt_repository: repo='deb http://www.apache.org/dist/cassandra/debian 12x main' state=present update_cache=yes
+        
+  - name: Configuring the Cassandra ubuntu  / centos source repos
+    apt_repository: repo='deb-src http://www.apache.org/dist/cassandra/debian 12x main' state=present update_cache=yes
+        
+  - name: Install Cassandra
+    apt: pkg=cassandra state=installed update_cache=yes force=yes
+    
+  - name: stop cassandra
+    service: name=cassandra state=stopped enabled=no
+
+  - name: logs cleanup
+    shell: find /var/log/cassandra* -type f -exec rm -f {} \;
+    ignore_errors: yes

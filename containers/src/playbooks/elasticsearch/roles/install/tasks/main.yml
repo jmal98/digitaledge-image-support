@@ -1,0 +1,34 @@
+---
+  - yum: pkg={{ item }} state=installed
+    with_items:
+      - java-1.8.0-openjdk-headless
+      
+  # Split out creating users and their home directories due to bug when running a centos host and a ubuntu
+  # docker container.  Reference: http://www.fewbytes.com/docker-selinux-and-the-myth-of-kernel-indipendence/
+  - name: Adding the elasticsearch group
+    group: name=elasticsearch gid=1005 state=present
+      
+  - name: Adding the elasticsearch user
+    user: name=elasticsearch uid=1005 shell=/bin/bash createhome=no state=present group=elasticsearch groups= 
+    
+  - file: path=/home/elasticsearch owner=elasticsearch group=elasticsearch mode=0755 state=directory recurse=yes
+    
+  - name: Adding the Elasticsearch centos repo signature key
+    shell: rpm --import https://packages.elastic.co/GPG-KEY-elasticsearch
+    
+  - name: Configuring the Elasticsearch centos repo
+    copy: src=elastic.repo dest=/etc/yum.repos.d/elasticsearch.repo owner=root group=root mode=0644 force=yes
+    
+  - name: Install elasticsearch
+    yum: name=elasticsearch-1.4.4-1 state=installed
+    
+  - name: Disable auto start of Elasticsearch (ignore errors for case where building a centos Docker image which does not contain sysv or systemd init capabilities)
+    service: name=elasticsearch state=stopped enabled=no
+    ignore_errors: yes
+    
+  - copy: src=bootstrap dest=/sbin/bootstrap owner=elasticsearch group=elasticsearch mode=0544 force=yes
+  
+  - file: path=/etc/elasticsearch owner=elasticsearch group=elasticsearch mode=0755 state=directory recurse=yes
+  
+  - name: Allow runtime adjustment of values in /etc/sysconfig/elasticsearch
+    file: path=/etc/sysconfig/elasticsearch owner=elasticsearch group=elasticsearch mode=0644 state=file 

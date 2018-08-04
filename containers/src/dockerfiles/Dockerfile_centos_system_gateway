@@ -1,0 +1,21 @@
+FROM digitaledge/SYSTEM_RELEASE_AND_TAG_PLACEHOLDER
+
+RUN mkdir -p $PLAYBOOK
+
+ADD gateway.tar.gz $PLAYBOOK/
+
+ADD params.yml $PLAYBOOK/gateway/
+
+RUN ansible-playbook $PLAYBOOK/gateway/site.yml -c local --tags "install"
+
+RUN chown -R rtws:rtws /mnt/rdafs
+
+VOLUME ["/mnt/rdafs"]
+
+EXPOSE 1099
+
+USER rtws
+
+WORKDIR /usr/local/rtws/commons-core/bin/boot
+
+CMD ["/sbin/bootstrap"]	

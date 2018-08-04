@@ -1,0 +1,26 @@
+---
+  - yum: pkg={{ item }} state=installed
+    with_items:
+      - java-1.8.0-openjdk-headless
+      - tar
+      - unzip
+      - dos2unix
+      - openssl
+      - logrotate
+      - sudo
+      
+  - name: Setup softlink to allow fromdos to work on centos
+    shell: ln -sf /bin/dos2unix /bin/fromdos
+      
+  - name: Disable requiretty
+    replace: dest=/etc/sudoers owner=root group=root mode=0440 regexp='Defaults    requiretty' replace='#Defaults    requiretty'
+              backup=yes validate='visudo -cf %s'
+  
+  - name: Installing jq
+    shell: curl -o /usr/local/bin/jq http://stedolan.github.io/jq/download/linux64/jq
+    
+  - command: chmod +x /usr/local/bin/jq
+  
+  - include: setup-appfs.yml
+      
+  - include: setup-rtws.yml

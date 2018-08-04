@@ -1,0 +1,15 @@
+---
+- hosts: all
+  vars:
+    rtws_home: /usr/local/rtws
+    rtws_appfs: /mnt/appfs
+    playbook_home: /tmp/.pbook
+  vars_files:
+    - params.yml
+    
+    
+  roles:
+  - { role: users, tags: ['users'] }
+  - { role: release, tags: ['release'] }
+  - { role: configuration, tags: ['configuration'] }
+  - { role: models, tags: ['models'] }

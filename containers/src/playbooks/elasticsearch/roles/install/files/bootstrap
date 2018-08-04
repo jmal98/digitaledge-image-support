@@ -1,0 +1,22 @@
+#!/bin/bash
+
+ansible-playbook /tmp/.pbook/elasticsearch/site.yml -c local --tags "pre-start"
+
+if [ $? -ne 0 ]; then
+   echo "Pre-start failed, exiting."
+   exit 1
+fi
+
+exec="/usr/share/elasticsearch/bin/elasticsearch"
+prog="elasticsearch"
+pidfile=/home/elasticsearch/${prog}.pid
+
+[ -e /etc/sysconfig/$prog ] && . /etc/sysconfig/$prog
+
+export ES_HEAP_SIZE
+export ES_HEAP_NEWSIZE
+export ES_DIRECT_SIZE
+export ES_JAVA_OPTS
+export JAVA_HOME
+
+$exec -p $pidfile -Des.default.path.home=$ES_HOME -Des.default.path.logs=$LOG_DIR -Des.default.path.data=$DATA_DIR -Des.default.path.work=$WORK_DIR -Des.default.path.conf=$CONF_DIR

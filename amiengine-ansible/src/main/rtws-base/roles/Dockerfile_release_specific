@@ -1,0 +1,16 @@
+# Dockerfile for building a image for use by a system in appliance mode
+# Remember, each action in the current version of Docker creates a new revision to the image
+# being built so minimize the number of actions required to reduce the revisions necessary
+# to create the appliance image.
+
+FROM digitaledge/base_image:latest
+
+COPY rtws-base.tar.gz /root/
+
+COPY repo.zip /root/ 
+
+# Run the playbook to configure the appfs area
+RUN cd /root/ && tar -xzf rtws-base.tar.gz && \
+	cd /root/rtws-base && ansible-playbook site.yml -c local && rm -rf /root/rtws-base*
+
+ENTRYPOINT ["/usr/local/rtws/boot/rtws_appliance_init.sh"]

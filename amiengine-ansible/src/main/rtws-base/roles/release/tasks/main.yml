@@ -1,0 +1,80 @@
+---  
+  - name: DigitalEdge release pre-download setup
+    file: path={{ rtws_appfs }}/release/{{ rtws_release }} owner=rtws group=rtws mode=0775 state=directory recurse=yes
+    
+  - name: DigitalEdge services pre-download stetup
+    file: path={{ rtws_appfs }}/services/{{ item }} owner=rtws group=rtws mode=0775 state=directory recurse=yes
+    with_items:
+      - transports
+      - datasinks
+      - parsers
+      - enrichments
+    
+  #- name: Download DigitalEdge common service components
+  #  shell: s3cmd -c {{ rtws_home }}/.s3cfg get --force s3://{{ rtws_release_bucket }}/{{ rtws_release }}/services/* {{ rtws_appfs }}/services/
+ 
+  #- name: Download DigitalEdge services components
+  #  shell: s3cmd -c {{ rtws_home }}/.s3cfg get --force -r s3://{{ rtws_release_bucket }}/{{ rtws_release }}/services/{{ item }}/ {{ rtws_appfs }}/services/{{ item }}/
+  #  with_items:
+  #    - transports
+  #    - datasinks
+  #    - parsers
+  #    - enrichments
+  
+  - name: Move the repo zip to the appfs area
+    shell: mv -f /root/repo.zip {{ rtws_appfs }}/services/.
+         
+  #- name: Remove s2i components  (TODO remove this remove when necessary :))
+  #  file: path={{ rtws_appfs }}/services/datasinks/deleidos-rtws-plugin-datasink-s2i-hdfs-plugin-deps.zip state=absent recurse=no
+    
+  #- file: path={{ rtws_appfs }}/services/datasinks/deleidos-rtws-plugin-datasink-s2i-hdfs.jar state=absent recurse=no
+      
+  - name: Download DigitalEdge release components
+    s3: bucket={{ rtws_release_bucket }} object=/{{ rtws_release }}/release/{{ item }} dest={{ rtws_appfs }}/release/{{ rtws_release }}/{{ item }} mode=get aws_access_key={{ aws_access_key }} aws_secret_key={{ aws_secret_key }}
+    with_items:
+      - deleidos-rtws-transport.tar.gz
+      - deleidos-rtws-ingest.tar.gz
+      - deleidos-rtws-commons-core.tar.gz
+      - deleidos-rtws-base-image-playbook.tar.gz
+      - DatabaseWrapper.jar
+      - deleidos-rtws-apacheds.tar.gz
+      - deleidos-rtws-boot-apps.tar.gz
+      - deleidos-rtws-cert-auth-dist.tar.gz
+      - deleidos-rtws-jms-router.tar.gz
+      
+  # This is very temporary until we get authentication all figured out
+  # webapp-cas project
+  - name: Download accounts.war for CAS Server
+    s3: bucket=rtws.appfs.docker object=/accounts.war dest={{ rtws_appfs }}/release/accounts.war mode=get aws_access_key={{ aws_access_key }} aws_secret_key={{ aws_secret_key }}
+
+  # webapp-logger-proxy project
+  - name: Download logger.war for CAS Client and Proxy
+    s3: bucket=rtws.appfs.docker object=/logger.war dest={{ rtws_appfs }}/release/logger.war mode=get aws_access_key={{ aws_access_key }} aws_secret_key={{ aws_secret_key }}
+      
+  - name: Downloading ActiveMQ 5.12.0
+    get_url: url=http://archive.apache.org/dist/activemq/5.12.0/apache-activemq-5.12.0-bin.tar.gz dest={{ rtws_appfs }}/release/apache-activemq-5.12.0-bin.tar.gz
+
+  - name: Downloading Jetty 8.1.16
+    get_url: url=http://archive.eclipse.org/jetty/8.1.16.v20140903/dist/jetty-distribution-8.1.16.v20140903.tar.gz dest={{ rtws_appfs }}/release/jetty-distribution-8.1.16.v20140903.tar.gz
+   
+  # TODO remove when external kibana container image has been fully integrated  
+  #- name: Download Kibana 4
+  #  get_url: url=https://download.elasticsearch.org/kibana/kibana/kibana-4.0.1-linux-x64.tar.gz dest={{ rtws_appfs }}/release/kibana-4.0.1-linux-x64.tar.gz
+    
+  #- name: Install Java 7 for Elasticsearch and Kibana
+  #  apt: pkg=openjdk-7-jre state=installed update_cache=yes force=yes
+  #  when: ansible_distribution == 'Ubuntu'
+    
+  #- name: Install Java 7 for Elasticsearch and Kibana
+  #  yum: pkg=java-1.7.0-openjdk-devel state=installed
+  #  when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+
+  - name: Ensure correct permissions 
+    file: path={{ rtws_appfs }}/{{ item }} owner=rtws group=rtws mode=0755 state=directory recurse=yes
+    with_items:
+      - release
+      - services
+      
+  - name: Ensure at least one editor is in the appliance image
+    apt: pkg=vim state=installed update_cache=false
+    when: ansible_distribution == 'Ubuntu'

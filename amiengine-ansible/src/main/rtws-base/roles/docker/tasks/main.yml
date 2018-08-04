@@ -1,0 +1,36 @@
+---   
+  - name: Adding the Docker ubuntu repo signature key
+    apt_key: keyserver=hkp://keyserver.ubuntu.com:80 id=36A1D7869245C8950F966E92D8576A8BA88D21E9 state=present
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Configuring the Docker ubuntu repo
+    apt_repository: repo='deb https://get.docker.com/ubuntu docker main' state=present update_cache=no
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Install backported kernel
+    apt: pkg={{ item }} state=installed update_cache=true
+    with_items:
+      - linux-image-generic-lts-raring
+      - linux-headers-generic-lts-raring
+      - bridge-utils
+    when: ansible_distribution == 'Ubuntu'
+      
+  - name: Install docker for Ubuntu
+    apt: pkg=lxc-docker state=installed update_cache=false
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Install docker for CentOS 7.X   
+    yum: name=docker state=latest
+    when: ansible_distribution == "CentOS" and
+          (ansible_distribution_major_version == "7")
+    
+  - name: Install pip
+    apt: pkg=python-pip state=present
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Install pip
+    yum: pkg=python-pip state=present
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+    
+  - name: Install docker-py
+    pip: name=docker-py version=0.5.3

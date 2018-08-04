@@ -1,0 +1,66 @@
+---  
+  # Setup: /usr/local/rtws 
+  - file: path=/usr/local/rtws owner=rtws group=rtws mode=0775 state=directory recurse=no
+  
+  - file: path=/usr/local/rtws/boot/lib owner=rtws group=rtws mode=0775 state=directory recurse=no
+    
+  - name: Extracting release to /usr/local/rtws
+    unarchive: src={{ rtws_appfs }}/release/{{ rtws_release }}/{{ item }} dest=/usr/local/rtws/
+    with_items:
+      - deleidos-rtws-commons-core.tar.gz
+      - deleidos-rtws-boot-apps.tar.gz
+      - deleidos-rtws-cert-auth-dist.tar.gz
+      
+  
+  - name: Removing release tar.gz(s) 
+    file: path={{ rtws_appfs }}/release/{{ rtws_release }}/{{ item }} state=absent
+    with_items:
+      - deleidos-rtws-commons-core.tar.gz
+      - deleidos-rtws-boot-apps.tar.gz
+      - deleidos-rtws-cert-auth-dist.tar.gz
+      
+  
+  - name: Making python scripts executable
+    shell: chmod a+x {{ item }}/*.py
+    with_items:
+      - /usr/local/rtws/commons-core/bin/boot
+  
+  - name: Ensuring python scripts do not have Windows line feeds
+    shell: dos2unix {{ item }}/*.py
+    with_items:
+      - /usr/local/rtws/commons-core/bin/boot
+      
+          
+  - name: Making shell scripts executable
+    shell: chmod a+x {{ item }}/*.sh
+    with_items:
+      - /usr/local/rtws/commons-core/bin/boot
+      - /usr/local/rtws/boot-apps/bin
+      - /usr/local/rtws/cert-auth/bin
+  
+  - name: Ensuring shellscripts do not have Windows line feeds
+    shell: dos2unix {{ item }}/*.sh
+    with_items:
+      - /usr/local/rtws/commons-core/bin/boot
+      - /usr/local/rtws/boot-apps/bin
+      - /usr/local/rtws/cert-auth/bin
+      
+      
+  # Setting up the cert environment
+  - shell: /usr/local/rtws/cert-auth/bin/edit_sudoers.sh
+    args:
+      chdir: /usr/local/rtws/cert-auth/bin
+  
+  - shell: /usr/local/rtws/cert-auth/bin/setup_env.sh
+    args:
+      chdir: /usr/local/rtws/cert-auth/bin
+      
+      
+  
+  
+  
+  - name: Ensure /usr/local/rtws has the correct permissions
+    file: path=/usr/local/rtws owner=rtws group=rtws mode=0775 state=directory recurse=yes
+  
+  
+      

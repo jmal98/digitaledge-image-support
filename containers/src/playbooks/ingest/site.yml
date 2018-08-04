@@ -1,0 +1,14 @@
+---
+- hosts: all
+  vars:
+    rtws_home: /usr/local/rtws
+    rtws_appfs: /mnt/appfs
+    playbook_home: /tmp/.pbook
+    appliance_syslog_host: "{{ lookup('env','APPLIANCE_SYSLOG_HOST') | default('127.0.0.1',true) }}"
+    
+  vars_files:
+    - params.yml
+    
+  roles:
+  - { role: install, tags: ['install'] }
+  - { role: pre-start, tags: ['pre-start'] }

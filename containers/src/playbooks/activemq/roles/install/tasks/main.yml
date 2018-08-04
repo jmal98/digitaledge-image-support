@@ -1,0 +1,47 @@
+---
+  - yum: pkg={{ item }} state=installed
+    with_items:
+      - tar
+      
+  - name: TODO remove this hack for making DE apps happy which assume /etc/ssl/certs/java exists
+    file: path=/etc/ssl/certs/java owner=root group=root mode=0775 state=directory recurse=yes
+      
+  - name: TODO remove this hack for making DE apps happy which assume /etc/ssl/certs/java/cacerts exists
+    shell: ln -sf /etc/pki/java/cacerts /etc/ssl/certs/java/cacerts
+  
+  - name: Downloading ActiveMQ {{ activemq_version }}
+    get_url: url=http://archive.apache.org/dist/activemq/{{ activemq_version }}/apache-activemq-{{ activemq_version }}-bin.tar.gz dest=/usr/local/apache-activemq-{{ activemq_version }}-bin.tar.gz
+        
+  - name: Unpack ActiveMQ
+    command: tar -xzvf /usr/local/apache-activemq-{{ activemq_version }}-bin.tar.gz
+    args:
+      chdir: /usr/local/
+      creates: /usr/local/apache-activemq-{{ activemq_version }}
+      
+  - file: src=/usr/local/apache-activemq-{{ activemq_version }} dest=/usr/local/apache-activemq owner=activemq group=activemq state=link
+  
+  - command: mv /usr/local/apache-activemq-{{ activemq_version }}/conf/activemq.xml /usr/local/apache-activemq-{{ activemq_version }}/conf/activemq-default.xml
+    args:
+      creates: /usr/local/apache-activemq-{{ activemq_version }}/conf/activemq-default.xml
+    
+  - name: Set ownership on ActiveMQ
+    command: chown -R activemq:activemq /usr/local/apache-activemq-{{ activemq_version }}
+      
+  - command: rm -f /usr/local/apache-activemq-{{ activemq_version }}-bin.tar.gz
+    args:
+      removes: /usr/local/apache-activemq-{{ activemq_version }}-bin.tar.gz
+     
+  - get_url: url=http://search.maven.org/remotecontent?filepath=io/prometheus/jmx/jmx_prometheus_javaagent/0.5/jmx_prometheus_javaagent-0.5.jar dest=/usr/local/apache-activemq-{{ activemq_version }}/lib/optional/jmx_prometheus_javaagent-0.5.jar owner=activemq group=activemq mode=0440
+  
+  - copy: src=bootstrap dest=/sbin/bootstrap owner=activemq group=activemq mode=0544 force=yes
+  
+  - file: path={{ item }} owner=activemq group=activemq mode=0755 state=directory
+    with_items:
+      - /mnt/appfs
+      - /mnt/rdafs
+      - /usr/local/rtws
+  
+  - file: path={{ item }} owner=activemq group=activemq mode=0666 state=touch
+    with_items:
+      - /etc/default/activemq
+      - /etc/rtwsrc

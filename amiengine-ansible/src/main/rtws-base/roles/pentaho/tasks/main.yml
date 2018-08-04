@@ -1,0 +1,30 @@
+---
+  - name: Downloading Pentaho Version 4.8.0  (Using wget to follow re-directs)
+    shell: wget -O /tmp/biserver-ce-4.8.0-stable.zip "http://sourceforge.net/projects/pentaho/files/Business%20Intelligence%20Server/4.8.0-stable/biserver-ce-4.8.0-stable.zip/download"
+    args:
+      chdir: /tmp
+      creates: /tmp/biserver-ce-4.8.0-stable.zip
+    
+  - name: Unpack Pentaho
+    unarchive: src=/tmp/biserver-ce-4.8.0-stable.zip dest=/usr/local
+  
+  - name: Downloading CDA Tools Installer (Using wget to follow re-directs)
+    shell: wget -O /tmp/master.zip "https://github.com/pmalves/ctools-installer/archive/master.zip"
+    args:
+      chdir: /tmp
+      creates: /tmp/master.zip
+    
+  - name: Unpack CDA Tools Installer
+    unarchive: src=/tmp/master.zip dest=/tmp
+    
+  - name: Execute CDA Tools Installer
+    shell: chmod +x /tmp/ctools-installer-master/ctools-installer.sh ; /tmp/ctools-installer-master/ctools-installer.sh -s /usr/local/biserver-ce/pentaho-solutions -w /usr/local/biserver-ce/tomcat/webapps/pentaho -y
+    args:
+      creates: /usr/local/biserver-ce/pentaho-solutions/system/cda/version.xml
+      
+    
+  - name: Ensure correct permissions on Pentaho (Admin console)
+    file: path=/usr/local/administration-console owner=root group=root state=directory recurse=yes
+    
+  - name: Ensure correct permissions on Pentaho (BI Server)
+    file: path=/usr/local/biserver-ce owner=root group=root state=directory recurse=yes  

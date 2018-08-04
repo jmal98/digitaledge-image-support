@@ -1,0 +1,14 @@
+# Dockerfile for building a base image for re-use in building the DE container images
+# The base image has all of the static components like elasticsearch, openssl, java6
+
+FROM ubuntu:12.04
+
+RUN apt-get -y update && apt-get -y install git wget curl tofrodos python-setuptools python-pip python-dev gcc sudo
+
+# Install ansible
+RUN pip install paramiko PyYAML jinja2 httplib2 ansible==1.7.2 boto pysphere &&  mkdir -p /etc/ansible && chmod 755 /etc/ansible ; echo '127.0.0.1' > /etc/ansible/hosts
+
+COPY rtws-base.tar.gz /root/
+
+# Run the playbook to configure the appfs area
+RUN cd /root/ && tar -xzf rtws-base.tar.gz && cd /root/rtws-base && ansible-playbook site.yml -c local --tags "users,java,nodejs,s3cmd,openssl,activemq,elasticsearch,cleanup" && rm -rf /root/rtws-base*

@@ -1,0 +1,23 @@
+FROM digitaledge/SYSTEM_RELEASE_AND_TAG_PLACEHOLDER
+
+RUN mkdir -p $PLAYBOOK
+
+ADD transport.tar.gz $PLAYBOOK/
+
+ADD params.yml $PLAYBOOK/transport/
+
+COPY repo.zip $PLAYBOOK/transport/roles/install/files/
+
+RUN ansible-playbook $PLAYBOOK/transport/site.yml -c local --tags "install"
+
+RUN chown -R rtws:rtws /mnt/rdafs
+
+VOLUME ["/mnt/rdafs"]
+
+EXPOSE 1099
+
+USER rtws
+
+WORKDIR /usr/local/rtws/transport/bin
+
+CMD ["/sbin/bootstrap"]	

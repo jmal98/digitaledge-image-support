@@ -1,0 +1,23 @@
+FROM digitaledge/SYSTEM_RELEASE_AND_TAG_PLACEHOLDER
+
+RUN mkdir -p $PLAYBOOK
+
+ADD ingest.tar.gz $PLAYBOOK/
+
+ADD params.yml $PLAYBOOK/ingest/
+
+COPY repo.zip $PLAYBOOK/ingest/roles/install/files/
+
+RUN ansible-playbook $PLAYBOOK/ingest/site.yml -c local --tags "install"
+
+RUN chown -R rtws:rtws /mnt/rdafs
+
+VOLUME ["/mnt/rdafs"]
+
+EXPOSE 1099
+
+USER rtws
+
+WORKDIR /usr/local/rtws/ingest/bin
+
+CMD ["/sbin/bootstrap"]	

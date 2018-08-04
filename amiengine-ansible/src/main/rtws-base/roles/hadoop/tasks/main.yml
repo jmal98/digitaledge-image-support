@@ -1,0 +1,186 @@
+---
+  - name: Install base set of required packages (for hadoop components and other DE components aka mdadm used by mount_raid script).  The of packages mostly relocated from common to keep the image small for appliance use.
+    apt: pkg={{ item }} state=installed update_cache=false
+    with_items:
+      - nfs-common
+      - libwww-perl
+      - libxml2-utils
+      - libcurl4-openssl-dev     
+      - libxml2-dev
+      - libfuse-dev
+      - comerr-dev
+      - libfuse2
+      - libidn11-dev
+      - libkdb5-6
+      - libgssrpc4
+      - libkrb5-dev
+      - libselinux1-dev
+      - libsepol1-dev
+      - pkg-config
+      - fuse-utils
+      - mdadm
+      - xfsprogs
+      - bind9
+      - dnsutils
+      - libldap2-dev
+      - ldap-utils
+      - liblzo2-dev
+      
+  - name: Adding the Cloudera ubuntu repo signature key
+    apt_key: url=http://archive.cloudera.com/cdh4/ubuntu/{{ ansible_distribution_release }}/amd64/cdh/archive.key state=present
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Configuring the Cloudera CDH4 ubuntu repo
+    apt_repository: repo='deb [arch=amd64] http://archive.cloudera.com/cdh4/ubuntu/{{ ansible_distribution_release }}/amd64/cdh {{ ansible_distribution_release }}-cdh4.3.0 contrib' state=present update_cache=no
+    when: ansible_distribution == 'Ubuntu' 
+  
+  - name: Configuring the Cloudera CDH4 ubuntu src repo
+    apt_repository: repo='deb-src http://archive.cloudera.com/cdh4/ubuntu/{{ ansible_distribution_release }}/amd64/cdh {{ ansible_distribution_release }}-cdh4.3.0 contrib' state=present update_cache=no
+    when: ansible_distribution == 'Ubuntu'
+  
+  - name: Configuring the Cloudera CDH4 ubuntu gpl extras repo
+    apt_repository: repo='deb [arch=amd64] http://archive.cloudera.com/gplextras/ubuntu/{{ ansible_distribution_release }}/amd64/gplextras {{ ansible_distribution_release }}-gplextras4 contrib' update_cache=yes
+    when: ansible_distribution == 'Ubuntu'
+     
+  - name: Install hadoop-hdfs-namenode
+    apt: pkg=hadoop-hdfs-namenode state=installed update_cache=false
+    notify:
+      - stop hadoop-hdfs-namenode
+  
+  - name: Install hadoop-hdfs-secondarynamenode
+    apt: pkg=hadoop-hdfs-secondarynamenode state=installed update_cache=false
+    notify:
+      - stop hadoop-hdfs-secondarynamenode
+  
+  - name: Install hadoop-0.20-mapreduce-jobtracker
+    apt: pkg=hadoop-0.20-mapreduce-jobtracker state=installed update_cache=false
+    notify:
+      - stop hadoop-0.20-mapreduce-jobtracker
+  
+  - name: Install hadoop-hdfs-datanode
+    apt: pkg=hadoop-hdfs-datanode state=installed update_cache=false
+    notify:
+      - stop hadoop-hdfs-datanode
+  
+  - name: Install hadoop-0.20-mapreduce-tasktracker
+    apt: pkg=hadoop-0.20-mapreduce-tasktracker state=installed update_cache=false
+    notify:
+      - stop hadoop-0.20-mapreduce-tasktracker
+  
+  - name: Install hadoop-httpfs
+    apt: pkg=hadoop-httpfs state=present update_cache=false
+    notify:
+      - stop hadoop-httpfs
+  
+  - name: Install zookeeper
+    apt: pkg=zookeeper state=installed update_cache=false
+  
+  - name: Install zookeeper-server
+    apt: pkg=zookeeper-server state=installed update_cache=false
+    notify:
+      - stop zookeeper-server
+  
+  - name: Install hadoop-lzo-cdh4
+    apt: pkg=hadoop-lzo-cdh4 state=installed update_cache=false
+  
+  - name: Install hadoop-client
+    apt: pkg=hadoop-client state=installed update_cache=false
+  
+  - name: Install hbase-master
+    apt: pkg=hbase-master state=installed update_cache=false
+    notify:
+      - stop hbase-master
+  
+  - name: Install hbase-thrift
+    apt: pkg=hbase-thrift state=installed update_cache=false
+    notify:
+      - stop hbase-thrift
+  
+  - name: Install hbase-regionserver
+    apt: pkg=hbase-regionserver state=installed update_cache=false
+    notify:
+      - stop hbase-regionserver
+  
+  - name: Install hive
+    apt: pkg=hive state=installed update_cache=false
+  
+  - name: Install hive-metastore
+    apt: pkg=hive-metastore state=installed update_cache=false
+    notify:
+      - stop hive-metastore
+  
+  - name: Install hive-server2
+    apt: pkg=hive-server2 state=installed update_cache=false
+    notify:
+      - stop hive-server2
+  
+  - name: Install pig
+    apt: pkg=pig state=installed update_cache=false
+  
+  - name: Install oozie
+    apt: pkg=oozie state=installed update_cache=false
+    notify:
+      - stop oozie
+  
+  - name: Install oozie-client
+    apt: pkg=oozie-client state=installed update_cache=false
+  
+  - name: Install hue
+    apt: pkg=hue state=installed update_cache=false
+    notify:
+      - stop hue
+  
+  - name: Install hue-server
+    apt: pkg=hue-server state=installed update_cache=false
+  
+  - name: Install hue-plugins
+    apt: pkg=hue-plugins state=installed update_cache=false
+    
+  - name: Adjust hdfs user limits for number of files
+    lineinfile: dest="/etc/security/limits.conf" regexp="^# End of file" insertbefore="^# End of file" line="hdfs  -       nofile  32768"
+    
+  - name: Adjust hbase user limits for number of files
+    lineinfile: dest="/etc/security/limits.conf" regexp="^# End of file" insertbefore="^# End of file" line="hbase  -      nofile  32768"
+    
+  - name: Adjust elasticsearch user limits for number of files (soft)
+    lineinfile: dest="/etc/security/limits.conf" regexp="^# End of file" insertbefore="^# End of file" line="elasticsearch soft nofile    80000"
+    
+  - name: Adjust elasticsearch user limits for number of files (hard)
+    lineinfile: dest="/etc/security/limits.conf" regexp="^# End of file" insertbefore="^# End of file" line="elasticsearch hard nofile    100000" 
+    
+  - name: Adjust hdfs user limits for number of processes
+    lineinfile: dest="/etc/security/limits.conf" regexp="^# End of file" insertbefore="^# End of file" line="hdfs  -       nproc  32768"
+    
+  - name: Adjust hbase user limits for number of processes
+    lineinfile: dest="/etc/security/limits.conf" regexp="^# End of file" insertbefore="^# End of file" line="hbase  -      nproc  32768"
+    
+  - name: Adjust elasticsearch user limits for memory manipulation
+    lineinfile: dest="/etc/security/limits.conf" regexp="^# End of file" insertbefore="^# End of file" line="elasticsearch -   memlock unlimited" 
+    
+  - name: Adjust pam sessions for limits to take affect
+    lineinfile: dest=/etc/pam.d/common-session line="session required  pam_limits.so"
+    
+  - name: Signal for hadoop ecosystem daemons log cleanup
+    shell: echo "signal"
+    notify:
+      - logs cleanup hadoop
+      - logs cleanup hive
+      - logs cleanup hue
+      - logs cleanup zookeeper
+      
+  - service: name={{ item }} enabled=no
+    with_items:
+      - hadoop-hdfs-namenode
+      - hadoop-hdfs-secondarynamenode
+      - hadoop-0.20-mapreduce-jobtracker
+      - hadoop-hdfs-datanode
+      - hadoop-0.20-mapreduce-tasktracker
+      - hadoop-httpfs
+      - zookeeper-server
+      - hbase-master
+      - hbase-thrift
+      - hbase-regionserver
+      - hive-metastore
+      - hive-server2
+      - oozie
+      - hue

@@ -1,0 +1,28 @@
+---  
+  # Setup: /mnt/appfs      
+  - name: DigitalEdge release pre-download setup
+    file: path={{ rtws_appfs }}/release/{{ rtws_release }} owner=rtws group=rtws mode=0775 state=directory recurse=yes
+      
+  - name: DigitalEdge services pre-download stetup
+    file: path={{ rtws_appfs }}/services/{{ item }} owner=rtws group=rtws mode=0775 state=directory recurse=yes
+    with_items:
+      - transports
+      - datasinks
+      - parsers
+      - enrichments
+         
+  - name: Download DigitalEdge release components
+    shell: AWS_ACCESS_KEY_ID={{ aws_access_key }} AWS_SECRET_ACCESS_KEY={{ aws_secret_key }} aws s3 cp --only-show-errors s3://{{ rtws_release_bucket }}/{{ rtws_release }}/release/{{ item }} {{ rtws_appfs }}/release/{{ rtws_release }}/{{ item }}
+    with_items:
+      - deleidos-rtws-transport.tar.gz
+      - deleidos-rtws-ingest.tar.gz
+      - deleidos-rtws-commons-core.tar.gz
+      - DatabaseWrapper.jar
+      - deleidos-rtws-boot-apps.tar.gz
+      - deleidos-rtws-cert-auth-dist.tar.gz
+   
+  - name: Ensure correct permissions 
+    file: path={{ rtws_appfs }}/{{ item }} owner=rtws group=rtws mode=0755 state=directory recurse=yes
+    with_items:
+      - release
+      - services

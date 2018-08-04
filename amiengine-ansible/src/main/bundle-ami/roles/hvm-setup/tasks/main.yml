@@ -1,0 +1,24 @@
+---
+  - name: Install required packages
+    apt: pkg={{ item }} state=installed update_cache=true
+    with_items:
+      - gdisk 
+      - kpartx
+      - lrzsz 
+      - unzip
+      - grub
+      
+  - name: Update console boot args
+    replace: dest=/boot/grub/menu.lst regexp='console=hvc0' replace='console=ttyS0'
+    
+  - name: Purge old ami/api tools
+    shell: apt-get -y purge ec2-ami-tools ec2-api-tools -V 
+    
+  - name: Download newer amitools
+    shell: wget http://s3.amazonaws.com/ec2-downloads/ec2-ami-tools-1.5.4.zip
+  
+  - name: Download newer apitools
+    shell: wget http://s3.amazonaws.com/ec2-downloads/ec2-api-tools.zip
+    
+  - name: Setup ami/api tools environment
+    template: src=ec2_profile.j2 dest=/etc/profile.d/ec2_profile.sh owner=root group=root mode=0555

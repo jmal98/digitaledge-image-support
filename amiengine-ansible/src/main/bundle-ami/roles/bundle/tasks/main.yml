@@ -1,0 +1,22 @@
+---
+  - name: Perms
+    shell: chmod 777 /tmp
+      
+  - name: Bundle Volume
+    shell: ec2-bundle-vol {{ additional_bundle_volume_args }} -s 7120 --debug -r x86_64 -d /mnt -p {{ created_ami_prefix }} -u {{ account_id }} --batch --cert {{ ec2_cert }} --privateKey {{ ec2_private_key }} -e /var/lib/cloud/scripts/
+    
+  - name: Upload Bundle
+    shell: ec2-upload-bundle --retry -b {{ target_ami_bucket }} -m /mnt/{{ created_ami_prefix}}.manifest.xml -a {{ iam_user_accessKey }} -s {{ iam_user_secret_key }} --location US
+    
+  - name: Restart networking to trigger regeneration of /etc/resolve.conf (removed by clean prior to bundling)
+    command: /etc/init.d/networking restart
+      
+  - name: Register AMI
+    shell: ec2-register {{ additional_register_args }}  --name "{{ created_ami_name }}" {{ target_ami_bucket }}/{{ created_ami_prefix }}.manifest.xml -K {{ ec2_private_key }} -C {{ ec2_cert }} -a x86_64 > /mnt/ec2-register.out 2>&1
+    
+  - name: Saving Pk
+    s3: bucket={{ target_ami_bucket }} object={{ created_ami_prefix }}_pk-autogen.pem src=/mnt/pk-autogen.pem mode=put aws_access_key={{ iam_user_accessKey }} aws_secret_key={{ iam_user_secret_key }}
+    
+  - name: Saving Cert
+    s3: bucket={{ target_ami_bucket }} object={{ created_ami_prefix }}_cert-autogen.pem src=/mnt/cert-autogen.pem mode=put aws_access_key={{ iam_user_accessKey }} aws_secret_key={{ iam_user_secret_key }}
+            

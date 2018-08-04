@@ -1,0 +1,20 @@
+# Dockerfile for building a mongodb image for use by a system in appliance mode
+# Remember, each action in the current version of Docker creates a new revision to the image
+# being built so minimize the number of actions required to reduce the revisions necessary
+# to create the appliance image.
+
+FROM centos:7.2.1511
+
+RUN echo -e "[mongodb] \nname=mongodb-org-3.0\nbaseurl=http://repo.mongodb.org/yum/redhat/7/mongodb-org/3.0/x86_64/\ngpgcheck=0\nenabled=1" | tee /etc/yum.repos.d/mongodb-org-3.0.repo
+
+# Update apt-get sources AND install MongoDB
+RUN yum install -y mongodb-org logrotate
+
+# Create the MongoDB data directory
+RUN mkdir -p /mnt/rdafs
+
+# Expose port 27017 from the container to the host
+EXPOSE 27017
+
+# Set usr/bin/mongod as the dockerized entry-point application
+ENTRYPOINT usr/bin/mongod --dbpath /mnt/rdafs

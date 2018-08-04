@@ -1,0 +1,6 @@
+---
+  rtws_process_group: "{{ lookup('env','RTWS_PROCESS_GROUP') }}"
+  rtws_domain: "{{ lookup('env','RTWS_DOMAIN') }}"
+  rtws_fqdn: "{{ lookup('env','RTWS_FQDN') }}"
+  cert_dir: /tmp/certs
+  rtws_container_max_memory: "{{ lookup('env','RTWS_CONTAINER_MAX_MEMORY') }}"

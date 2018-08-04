@@ -1,0 +1,58 @@
+---
+  - name: stop hadoop-hdfs-namenode
+    service: name=hadoop-hdfs-namenode state=stopped
+    
+  - name: stop hadoop-hdfs-secondarynamenode
+    service: name=hadoop-hdfs-secondarynamenode state=stopped
+    
+  - name: stop hadoop-0.20-mapreduce-jobtracker
+    service: name=hadoop-0.20-mapreduce-jobtracker state=stopped
+    
+  - name: stop hadoop-hdfs-datanode
+    service: name=hadoop-hdfs-datanode state=stopped
+  
+  - name: stop hadoop-0.20-mapreduce-tasktracker
+    service: name=hadoop-0.20-mapreduce-tasktracker state=stopped
+  
+  - name: stop hadoop-httpfs
+    service: name=hadoop-httpfs state=stopped
+  
+  - name: stop zookeeper-server
+    service: name=zookeeper-server state=stopped
+  
+  - name: stop hbase-master
+    service: name=hbase-master state=stopped
+  
+  - name: stop hbase-thrift
+    service: name=hbase-thrift state=stopped
+  
+  - name: stop hbase-regionserver
+    service: name=hbase-regionserver state=stopped
+  
+  - name: stop hive-metastore
+    service: name=hive-metastore state=stopped
+  
+  - name: stop hive-server2
+    service: name=hive-server2 state=stopped
+  
+  - name: stop oozie
+    service: name=oozie state=stopped
+  
+  - name: stop hue
+    service: name=hue state=stopped
+  
+  - name: logs cleanup hadoop
+    shell: find /var/log/hadoop-* -type f -exec rm -f {} \;
+    ignore_errors: yes
+    
+  - name: logs cleanup hive
+    shell: find /var/log/hive -type f -exec rm -f {} \;
+    ignore_errors: yes
+ 
+  - name: logs cleanup hue
+    shell: find /var/log/hue -type f -exec rm -f {} \;
+    ignore_errors: yes
+    
+  - name: logs cleanup zookeeper
+    shell: find /var/log/zookeeper -type f -exec rm -f {} \;
+    ignore_errors: yes

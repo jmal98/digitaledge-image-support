@@ -1,0 +1,39 @@
+---
+  - name: Remove package cahe
+    shell: apt-get -y clean autoclean
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Remove package cache
+    shell: yum -y clean all
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+    
+  - name: Clear out ubuntu passwords
+    shell: passwd -d ubuntu    
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Clear out centos passwords
+    shell: passwd -d centos    
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+    
+  - name: Remove all authorized keys
+    shell: find /home -name authorized_keys -type f -exec rm -fv {} \;
+    ignore_errors: yes 
+    
+  - name: Remove shell history
+    shell: find /root/.*history /home/*/.*history -type f -exec rm -fv {} \;
+    ignore_errors: yes
+    
+  - name: Remove /etc/rtwsrc
+    command: rm -f /etc/rtwsrc
+    args:
+      removes: /etc/rtwsrc
+  
+  - name: Remove /mnt/rdafs
+    command: rm -rf /mnt/rdafs
+    args:
+      removes: /mnt/rdafs
+    
+  - name: Remove /etc/resolv.conf
+    command: rm -rf /etc/resolv.conf
+    args:
+      removes: /etc/resolv.conf

@@ -1,0 +1,20 @@
+---
+# The shannagins for /etc/rtwsrc are for a workaround for the behavior of the lineinfile module
+# reference: http://serverfault.com/questions/718586/ansible-lineinfile-and-permissions-of-parent-directory
+  - command: cp -fv /etc/rtwsrc /tmp/.rtwsrc
+
+  - name: Add RTWS_FQDN to rtwsrc
+    lineinfile: dest=/tmp/.rtwsrc line="RTWS_FQDN={{ rtws_fqdn }}" insertafter=EOF
+    
+  - name: Add RTWS_CONTAINER_MAX_MEMORY to rtwsrc
+    lineinfile: dest=/tmp/.rtwsrc line="RTWS_CONTAINER_MAX_MEMORY={{ rtws_container_max_memory }}" insertafter=EOF
+    
+  - name: Add RTWS_PROCESS_GROUP to rtwsrc
+    lineinfile: dest=/tmp/.rtwsrc line="RTWS_PROCESS_GROUP={{ rtws_process_group }}" insertafter=EOF
+    
+  - name: Add RTWS_INGEST_CONFIG to rtwsrc for datasinks
+    lineinfile: dest=/tmp/.rtwsrc line="RTWS_INGEST_CONFIG={{ rtws_ingest_config }}" insertafter=EOF
+
+  - shell: cat /tmp/.rtwsrc > /etc/rtwsrc
+  
+  - command: rm /tmp/.rtwsrc

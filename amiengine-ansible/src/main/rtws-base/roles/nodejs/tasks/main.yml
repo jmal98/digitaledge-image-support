@@ -1,0 +1,23 @@
+---
+  - name: Install base set of required packages
+    yum: pkg={{ item }} state=installed
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+    with_items:
+      - wget
+  
+  - stat: path=/usr/local/bin/node
+    register: node
+  
+  - name: Downloading nodejs (ver 0.10.26)
+    shell: wget -O /tmp/node-v0.10.26-linux-x64.tar.gz "http://nodejs.org/dist/v0.10.26/node-v0.10.26-linux-x64.tar.gz"
+    when: not node.stat.exists
+    
+  - name: Installing nodejs
+    shell: cd /usr/local && tar --strip-components 1 -xzf /tmp/node-v0.10.26-linux-x64.tar.gz
+    when: not node.stat.exists
+    
+  - name: nodejs install cleanup
+    command: rm -f /usr/local/README.md /tmp/node-v0.10.26-linux-x64.tar.gz
+    args:
+      removes: /tmp/node-v0.10.26-linux-x64.tar.gz
+    when: not node.stat.exists

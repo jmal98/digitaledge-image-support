@@ -1,0 +1,12 @@
+---
+- hosts: all
+  vars:
+    activemq_version: 5.12.0
+    rtws_home: /usr/local/rtws
+    rtws_appfs: /mnt/appfs
+    playbook_home: /tmp/.pbook
+    
+  roles:
+  - { role: users, tags: ['users'] }
+  - { role: install, tags: ['install'] }
+  - { role: pre-start, tags: ['pre-start'] }

@@ -1,0 +1,89 @@
+---
+  - name: Install unzip
+    apt: pkg=unzip state=installed
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Install unzip
+    yum: pkg=unzip state=installed
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+        
+  - name: Downloading Maven  (Required to build Expressionoasis)
+    get_url: url=http://mirror.metrocast.net/apache/maven/maven-3/3.0.5/binaries/apache-maven-3.0.5-bin.zip dest=/tmp/apache-maven-3.0.5-bin.zip
+      
+  - name: Unpack Maven
+    command: unzip /tmp/apache-maven-3.0.5-bin.zip
+    args:
+      chdir: /tmp/
+      creates: /tmp/apache-maven-3.0.5
+          
+  - name: Cleanup Apache Maven Download
+    command: rm -f /tmp/apache-maven-3.0.5-bin.zip
+    args:
+      removes: /tmp/apache-maven-3.0.5-bin.zip
+  
+  - name: Enable multiverse
+    #shell: perl -pi -e 's%(universe)$%$1 multiverse%'  /etc/apt/sources.list
+    shell: perl -pi.orig -e   'next if /-backports/; s/^# (deb .* multiverse)$/$1/'   /etc/apt/sources.list
+    
+  - name: Install awstools PPA
+    apt_repository: repo='ppa:awstools-dev/awstools' state=present update_cache=yes
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Install AWS AMI/API tools (required for bundling)
+    apt: pkg={{ item }} state=installed update_cache=false
+    when: ansible_distribution == 'Ubuntu'
+    with_items:
+      - ec2-api-tools 
+      - ec2-ami-tools 
+      - iamcli
+          
+  - name: Install Unrar
+    apt: pkg=unrar state=installed update_cache=yes
+    when: ansible_distribution == 'Ubuntu'
+      
+  - name: Downloading Expressionoasis
+    get_url: url=http://expressionoasis.googlecode.com/files/expressionoasis-3-0-1.rar dest=/tmp/expressionoasis-3-0-1.rar
+        
+  - name: Pre-Unpack Expressionoasis
+    command: mkdir /tmp/expression/
+    args:
+      creates: /tmp/expression/
+        
+  - name: Unpack Expressionoasis
+    command: unrar x -y -r /tmp/expressionoasis-3-0-1.rar
+    args:
+      chdir: /tmp/expression/
+          
+  - name: Build Expressionoasis Dependencies
+    shell: export M2_HOME=/tmp/apache-maven-3.0.5; export PATH=$PATH:$M2_HOME/bin ; mvn install:install-file -Dfile=./lib/Utilities-1.1.jar -DgroupId=vedantatree -DartifactId=utilities -Dversion=1.1 -Dpackaging=jar -DgeneratePom=true -B
+    args:
+       chdir: /tmp/expression/
+  
+  - name: Build Expressionoasis
+    shell: export M2_HOME=/tmp/apache-maven-3.0.5; export PATH=$PATH:$M2_HOME/bin ; mvn clean package -B
+    args:
+       chdir: /tmp/expression/
+      
+  - name: Pre-Install of Expressionoasis jars
+    command: mkdir -p /usr/local/rtws/boot/lib/
+        
+      
+  - name: Install of Expressionasis Utility jar
+    command: cp -v ./lib/Utilities-1.1.jar /usr/local/rtws/boot/lib/.
+    args:
+      chdir: /tmp/expression/
+      
+  - name: Install of Expressionasis jar
+    command: cp -v ./target/ExpressionOasis-2.3-SNAPSHOT.jar /usr/local/rtws/boot/lib/expressionoasis-3.0.1.jar
+    args:
+      chdir: /tmp/expression/
+          
+          
+  - name: Post-Install of Expressionoasis jars
+    command: chown -R rtws:rtws /usr/local/rtws/
+        
+        
+  - name: Cleanup Expressionoasis build area
+    command: rm -rf /tmp/expression/
+    args:
+      removes: /tmp/expression/

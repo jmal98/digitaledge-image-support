@@ -1,0 +1,35 @@
+FROM centos:7.2.1511
+
+RUN yum -y install \
+		gcc \
+		libffi-devel \
+		openssl-devel \
+		python-devel \
+		python-yaml \
+		python-setuptools && \
+	easy_install setuptools==30.1.0 && \
+	easy_install \
+		ansible==1.9.3 \
+		boto==2.38.0 \
+		pysphere==0.1.7 && \
+	mkdir -p /etc/ansible && \
+	chmod 755 /etc/ansible ; echo '127.0.0.1' > /etc/ansible/hosts && \
+	yum -y remove \
+		gcc && \
+	yum -y clean all
+
+ENV ES_PLAYBOOK=/tmp/.pbook
+
+RUN mkdir -p $ES_PLAYBOOK
+
+ADD elasticsearch.tar.gz $ES_PLAYBOOK/
+
+RUN ansible-playbook $ES_PLAYBOOK/elasticsearch/site.yml -c local --tags "install"
+
+EXPOSE 9200-9300
+
+USER elasticsearch
+
+WORKDIR /home/elasticsearch
+
+CMD ["/sbin/bootstrap"]	

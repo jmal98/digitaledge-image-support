@@ -1,0 +1,24 @@
+---
+# This playbook bundles an AWS instance into an AMI.  
+- hosts: all
+  vars:
+    rtws_home: /usr/local/rtws
+    created_ami_prefix: CREATED_AMI_PREFIX
+    created_ami_name: CREATED_AMI_NAME
+    account_id: ACCOUNT_ID
+    ec2_cert: /mnt/cert-autogen.pem
+    ec2_private_key: /mnt/pk-autogen.pem
+    target_ami_bucket: TARGET_AMI_BUCKET
+    iam_user_accessKey: RTWS_ACCESS_KEY
+    iam_user_secret_key: RTWS_SECRET_KEY
+    additional_bundle_volume_args:  
+    additional_register_args:
+    enable_hvm_instance: false  
+    # Uncomment if bundling an hvm instance
+    #additional_bundle_volume_args: --partition gpt
+    #additional_register_args: --virtualization-type hvm 
+  
+  roles:
+  - { role: hvm-setup, when: enable_hvm_instance }
+  - cleanup
+  - bundle

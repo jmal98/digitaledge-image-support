@@ -1,0 +1,51 @@
+---
+  # Split out creating users and their home directories due to bug when running a centos host and a ubuntu
+  # docker container.  Reference: http://www.fewbytes.com/docker-selinux-and-the-myth-of-kernel-indipendence/
+  - name: Adding the ubuntu group
+    group: name=ubuntu gid=1000 state=present
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Ensuring the ubuntu user is present  (Handle case where host is Centos and therefore the ubuntu user is not present)
+    user: name=ubuntu uid=1000 shell=/bin/bash createhome=no state=present group=ubuntu  
+    when: ansible_distribution == 'Ubuntu'
+  
+  - name: Adding the centos group
+    group: name=centos gid=1000 state=present
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+    
+  - name: Ensuring the centos user is present  (Handle case where host is Centos and therefore the ubuntu user is not present)
+    user: name=centos uid=1000 shell=/bin/bash createhome=no state=present group=centos  
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'  
+  
+  - name: Adding the rtws group
+    group: name=rtws gid=1001 state=present
+      
+  - name: Adding the rtws user
+    user: name=rtws uid=1001 shell=/bin/bash createhome=no state=present group=rtws groups=
+    
+  - name: Adding the jetty group
+    group: name=jetty gid=1003 state=present
+      
+  - name: Adding the jetty
+    user: name=jetty uid=1003 shell=/bin/bash createhome=no state=present group=jetty groups=
+    
+  - name: Adding jetty to the rtws group
+    user: name=jetty uid=1003 shell=/bin/bash createhome=no state=present group=jetty groups=rtws,jetty
+  
+  - name: Adding the activemq group
+    group: name=activemq gid=1004 state=present
+    
+  - name: Adding the activemq user
+    user: name=activemq uid=1004 shell=/bin/bash createhome=no state=present group=activemq groups=
+ 
+  - file: path=/home/rtws owner=rtws group=rtws mode=0775 state=directory
+  
+  - file: path=/home/activemq owner=activemq group=activemq mode=0755 state=directory
+  
+  - file: path=/home/ubuntu owner=ubuntu group=ubuntu mode=0755 state=directory
+    when: ansible_distribution == 'Ubuntu'
+
+  - file: path=/home/centos owner=centos group=centos mode=0755 state=directory
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+      
+  - file: path=/home/jetty/logs owner=jetty group=jetty mode=0755 state=directory recurse=yes

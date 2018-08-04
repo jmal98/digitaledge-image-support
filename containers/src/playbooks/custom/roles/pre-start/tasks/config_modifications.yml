@@ -1,0 +1,10 @@
+---
+# Drop the domain from the jms entries until a suitable solution is available with the new set of images per process group and the current skydock/skydns
+
+  - replace: dest={{ item }} regexp='jms-ext-node1.{{ rtws_domain }}' replace='jms-ext-node1'
+    register: ingest_cfgs
+    with_fileglob: /usr/local/rtws/ingest/conf/*.xml
+        
+  - replace: dest={{ item }} regexp='jms-int-node1.{{ rtws_domain }}' replace='jms-int-node1'
+    register: ingest_cfgs2
+    with_fileglob: /usr/local/rtws/ingest/conf/*.xml

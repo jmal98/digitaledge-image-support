@@ -1,0 +1,24 @@
+---
+  - name: Install Openjdk PPA
+    apt_repository: repo='ppa:openjdk-r/ppa' state=present update_cache=yes
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Install Openjdk
+    apt: pkg={{ item }} state=installed update_cache=false
+    when: ansible_distribution == 'Ubuntu'
+    with_items:
+      - openjdk-8-jdk    
+    
+  - name: Install Openjdk
+    yum: pkg={{ item }} state=installed
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+    with_items:
+      - java-1.8.0-openjdk-devel
+      
+  - name: TODO remove this hack for making DE apps happy which assume /etc/ssl/certs/java exists
+    file: path=/etc/ssl/certs/java owner=root group=root mode=0775 state=directory recurse=yes
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+      
+  - name: TODO remove this hack for making DE apps happy which assume /etc/ssl/certs/java/cacerts exists
+    shell: ln -sf /etc/pki/java/cacerts /etc/ssl/certs/java/cacerts
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'    

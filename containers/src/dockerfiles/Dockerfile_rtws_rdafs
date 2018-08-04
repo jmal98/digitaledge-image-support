@@ -1,0 +1,8 @@
+FROM centos:7.2.1511
+
+RUN groupadd -g 1001 rtws \
+	&& useradd --shell /bin/bash --system -g 1001 -u 1001 rtws \
+	&& mkdir -p /mnt/rdafs /home/rtws \
+	&& chown -R rtws:rtws /mnt/rdafs /home/rtws
+
+VOLUME ["/mnt/rdafs"]

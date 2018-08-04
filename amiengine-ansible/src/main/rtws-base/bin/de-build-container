@@ -1,0 +1,89 @@
+#!/bin/bash
+set -e
+
+# Invoked by tenantapi to build an appliance container.
+# Assumed to be executing on the TMS API node
+
+source /etc/rtwsrc
+
+PLAYBOOK_SOURCE=/usr/local/rtws/container-playbooks/rtws-base
+
+SCRATCH="$1"
+RTWS_APPLIANCE_SYSTEM="$2"
+RTWS_RELEASE="$3"
+RTWS_BUCKET="$RTWS_MOUNT_DEVICE"
+
+# Periods in the image name breaks dns provided by skydns container
+# Also, current convention is: <name>.<image name (part after /)>.<environment>.<domain>
+# so quietly adhere to it for now...
+RTWS_APPLIANCE_SYSTEM_IMAGE_NAME="$(echo $RTWS_APPLIANCE_SYSTEM | tr -s '.' '_' | cut -d"_" -f1)"
+
+if [ ! -d $SCRATCH ]; then
+        echo "ERROR: $SCRATCH does not exist."
+fi
+
+if [[ -z $RTWS_BUCKET || -z $RTWS_RELEASE || -z $RTWS_SECRET_KEY || -z $RTWS_ACCESS_KEY || -z $RTWS_APPLIANCE_SYSTEM || -z $RTWS_APPLIANCE_SYSTEM_IMAGE_NAME ]]; then
+        echo "ERROR: missing one or more params."
+        exit 1
+fi
+
+
+cp -R /usr/local/rtws/container-playbooks/rtws-base $SCRATCH/.
+cd $SCRATCH/
+
+mv $SCRATCH/rtws-base/roles/Dockerfile_release_specific $SCRATCH/Dockerfile
+
+
+perl -i -pe "s:RTWS_BUCKET:$RTWS_BUCKET:g" rtws-base/site.yml
+perl -i -pe "s:RTWS_RELEASE:$RTWS_RELEASE:g" rtws-base/site.yml
+perl -i -pe "s:RTWS_SECRET_KEY:$RTWS_SECRET_KEY:g" rtws-base/site.yml
+perl -i -pe "s:RTWS_ACCESS_KEY:$RTWS_ACCESS_KEY:g" rtws-base/site.yml
+perl -i -pe "s:RTWS_APPLIANCE_SYSTEM:$RTWS_APPLIANCE_SYSTEM:g" rtws-base/site.yml
+
+tar -C $SCRATCH/ -cvf $SCRATCH/rtws-base.tar rtws-base
+chown rtws:rtws $SCRATCH/rtws-base.tar 
+gzip  $SCRATCH/rtws-base.tar
+chown rtws:rtws $SCRATCH/rtws-base.tar.gz
+rm -rf  $SCRATCH/rtws-base
+
+unzip -d . repo.zip
+rm repo.zip
+mv *-snapshot-* repo
+mv repo/private .
+mv repo/common .
+rm -rf repo/public
+rmdir repo
+mv private/*/* private/.
+rm -rf common/pki common/models private/models 
+find $SCRATCH -name deleidos-rtws-plugin-datasink-s2i-hdfs-plugin-deps.zip -exec rm -fv {} \;
+find $SCRATCH -name deleidos-rtws-plugin-datasink-s2i-hdfs.jar -exec rm -fv {} \;
+zip -9r repo.zip common private
+chown rtws:rtws $SCRATCH/repo.zip
+rm -rf $SCRATCH/common $SCRATCH/private 
+
+# TODO replace this arbitrary delay with a 
+# real check for the system configuration/model artifacts to be available in S3
+sleep 2m
+
+docker build --rm=true --force-rm=true --tag digitaledge/$RTWS_APPLIANCE_SYSTEM_IMAGE_NAME:$RTWS_RELEASE $SCRATCH
+
+if [ $? -ne 0 ]; then
+        echo "ERROR building container."
+        exit 1
+fi
+
+
+# Tag and push the image to the private registry
+docker tag -f digitaledge/$RTWS_APPLIANCE_SYSTEM_IMAGE_NAME:$RTWS_RELEASE der.deleidos.com/digitaledge/$RTWS_APPLIANCE_SYSTEM_IMAGE_NAME:$RTWS_RELEASE
+
+docker push der.deleidos.com/digitaledge/$RTWS_APPLIANCE_SYSTEM_IMAGE_NAME:$RTWS_RELEASE
+
+if [ $? -ne 0 ]; then
+        echo "ERROR building container."
+fi
+
+docker rmi der.deleidos.com/digitaledge/$RTWS_APPLIANCE_SYSTEM_IMAGE_NAME:$RTWS_RELEASE
+docker rmi digitaledge/$RTWS_APPLIANCE_SYSTEM_IMAGE_NAME:$RTWS_RELEASE
+
+# Allow jetty to remove directory
+chown -R jetty:jetty $SCRATCH

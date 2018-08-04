@@ -1,0 +1,22 @@
+# Dockerfile for building a kibana image for use by a system in appliance mode
+# Remember, each action in the current version of Docker creates a new revision to the image
+# being built so minimize the number of actions required to reduce the revisions necessary
+# to create the appliance image.
+
+FROM ubuntu:12.04
+
+RUN apt-get -y update && apt-get install -y wget sudo && addgroup --gid 1001 rtws && adduser --shell /bin/bash --system --gid 1001 rtws
+
+COPY no_border.png /tmp/no_border.png
+
+RUN wget -q --no-check-certificate -O /tmp/kibana-4.0.1-linux-x64.tar.gz https://download.elasticsearch.org/kibana/kibana/kibana-4.0.1-linux-x64.tar.gz && \
+	tar -C /usr/local -xzf /tmp/kibana-4.0.1-linux-x64.tar.gz && \
+	mv -fv /tmp/no_border.png /usr/local/kibana-4.0.1-linux-x64/src/public/images/no_border.png && \
+	chown -R rtws:rtws /usr/local/kibana-4.0.1-linux-x64 && \
+	rm -f /tmp/kibana-4.0.1-linux-x64.tar.gz && \
+	apt-get -y clean all
+
+EXPOSE 5601
+
+# Set usr/bin/mongod as the dockerized entry-point application
+ENTRYPOINT sed -i "s/localhost/elasticsearch1.$RTWS_DOMAIN/g" /usr/local/kibana-4.0.1-linux-x64/config/kibana.yml && sudo -u rtws /usr/local/kibana-4.0.1-linux-x64/bin/kibana

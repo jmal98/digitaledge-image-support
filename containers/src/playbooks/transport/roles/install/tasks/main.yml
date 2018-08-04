@@ -1,0 +1,61 @@
+---  
+  - file: path={{ item }} owner=rtws group=rtws mode=0755 state=directory recurse=yes
+    with_items:
+      - /usr/local/rtws/transport/logs
+      - /tmp/transport/lib
+      - /tmp/transport/scripts
+  
+  - name: Mimicking content downloader setup since there isn't a master with a repository
+    unarchive: src=repo.zip dest={{ rtws_appfs }}/services/ owner=rtws group=rtws
+    
+  - file: path={{ rtws_home }}/transport/conf owner=rtws group=rtws state=directory recurse=yes 
+  
+  - file: path={{ rtws_home }}/transport/bin owner=rtws group=rtws state=directory recurse=yes
+  
+  - unarchive: src={{ rtws_appfs }}/release/{{ rtws_release }}/deleidos-rtws-transport.tar.gz dest=/usr/local/rtws
+  
+  - unarchive: src={{ rtws_appfs }}/configuration/{{ rtws_system }}/deleidos-rtws-transport-conf.tar.gz dest={{ rtws_home }}/transport/conf
+    
+  - name: Setup transport scratch area used by their run scripts
+    shell: mkdir -p /tmp/{{ item }}/lib/plugin-dependencies   
+    with_items:
+      - transport
+      
+  - name: Link common root uploaded services to area used by transport run scripts
+    shell: find /mnt/appfs/services/*snapshot*/common/services -type f | xargs -n 1 -I {} ln -sf {} /tmp/transport/lib/.
+      
+  - name: Link common services to area used by transport run scripts
+    shell: find /mnt/appfs/services/*snapshot*/common/services/transports -type f | xargs -n 1 -I {} ln -sf {} /tmp/transport/lib/.
+
+  - name: Link private services to area used by transport (top level)
+    shell: find /mnt/appfs/services/*snapshot*/private/*/services -type f | xargs -n 1 -I {} ln -sf {} /tmp/transport/lib/.
+    ignore_errors: yes
+
+  - name: Link private services to area used by transport run scripts (ignoring errors as private plugins are optional)
+    shell: find /mnt/appfs/services/*snapshot*/private/*/services/transports -type f | xargs -n 1 -I {} ln -sf {} /tmp/transport/lib/.
+    ignore_errors: yes
+  
+  - shell: chmod a+x {{ rtws_home }}/transport/bin/*.sh
+  
+  - shell: chmod a+x {{ rtws_home }}/transport/bin/*.py
+  
+  - shell: dos2unix {{ rtws_home }}/transport/bin/*.sh
+  
+  - shell: dos2unix {{ rtws_home }}/transport/bin/*.py
+  
+  - name: Editing sudoers for transport use
+    shell: /usr/local/rtws/transport/bin/edit_sudoers.sh
+    args:
+      chdir: /usr/local/rtws/transport/bin/
+    
+  - name: Ensure correct permissions 
+    file: path={{ rtws_appfs }}/{{ item }} owner=rtws group=rtws mode=0755 state=directory recurse=yes
+    with_items:
+      - release
+      - services
+      
+  - copy: src=bootstrap dest=/sbin/bootstrap owner=rtws group=rtws mode=0544 force=yes
+      
+  - file: path={{ rtws_home }} owner=rtws group=rtws mode=0755 state=directory recurse=yes
+      
+  - include: cleanup.yml

@@ -1,0 +1,15 @@
+---  
+  - file: path=/tmp/.pbook/transport/roles/install/files/repo.zip state=absent
+  
+  - yum: pkg={{ item }} state=absent
+    with_items:
+      - wget
+      
+  - shell: yum -y clean all
+  
+  - file: path={{ item }} state=absent
+    with_items:
+      - "/var/lib/yum/history"
+      - "/var/log/anaconda"
+  
+  - file: path=/var/log/yum.log state=absent

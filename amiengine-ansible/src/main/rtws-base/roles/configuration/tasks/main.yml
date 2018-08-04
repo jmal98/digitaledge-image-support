@@ -1,0 +1,16 @@
+---
+  - file: path={{ rtws_appfs }}/configuration/{{ rtws_system }} owner=rtws group=rtws mode=0775 state=directory recurse=yes
+    
+  - name: Download DigitalEdge configuration components
+    s3: bucket={{ rtws_release_bucket }} object=/{{ rtws_release }}/configuration/{{ rtws_system }}/{{ item }} dest={{ rtws_appfs }}/configuration/{{ rtws_system }}/{{ item }} mode=get aws_access_key={{ aws_access_key }} aws_secret_key={{ aws_secret_key }}
+    with_items:
+      - deleidos-rtws-activemq-conf.tar.gz
+      - deleidos-rtws-transport-conf.tar.gz
+      - deleidos-rtws-ingest-conf.tar.gz
+      - deleidos-rtws-common-properties-conf.tar.gz
+      - deleidos-rtws-common-conf-conf.tar.gz
+      - deleidos-rtws-jms-router-conf.tar.gz 
+      - userConfig.json
+    
+  - name: Ensure correct permissions on {{ rtws_appfs }}/configuration
+    file: path={{ rtws_appfs }}/configuration owner=rtws group=rtws mode=0755 state=directory recurse=yes        

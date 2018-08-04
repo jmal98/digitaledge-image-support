@@ -1,0 +1,51 @@
+#!/bin/bash
+
+ansible-playbook /tmp/.pbook/transport/site.yml -c local --tags "pre-start"
+
+if [ $? -ne 0 ]; then
+   echo "Pre-start failed, exiting."
+   exit 1
+fi
+
+source /etc/rtwsrc
+
+cd /usr/local/rtws/transport/bin
+
+totalMemory=`free -m | grep "^Mem" | awk '{print $2}'`
+if [ ! -z $RTWS_CONTAINER_MAX_MEMORY ]; then
+	echo "Using $RTWS_CONTAINER_MAX_MEMORY for total memory available."
+	totalMemory=$RTWS_CONTAINER_MAX_MEMORY
+fi
+echo "Total memory available on the system $totalMemory"
+
+jvmsize=`expr \( \( $totalMemory \* 75 \) / 100 \) - 128`
+echo "JVM available heap size $jvmsize"
+
+ct=$(grep -wc "rtws.cloud.provider=APPLIANCE" /usr/local/rtws/properties/rtws-common.properties)
+if [ $ct -ge 1 ]; then
+    # TODO revisit this if/when the container's ip is not the first entry in /etc/hosts
+   INTERNAL_IP="$(cat /etc/hosts | grep -v "#" | head -1 | awk '{print $1 }')"
+else
+   INTERNAL_IP=`curl -s -f http://169.254.169.254/latest/meta-data/local-ipv4`
+fi
+
+RTWS_TRANSPORT_OPTIONS="-Xmx${jvmsize}m -DRTWS_ROOT_LOG_LEVEL=$RTWS_ROOT_LOG_LEVEL -DRTWS_APP_LOG_LEVEL=$RTWS_APP_LOG_LEVEL -DRTWS_ACCESS_KEY=$RTWS_ACCESS_KEY -DRTWS_TENANT_ID=$RTWS_TENANT_ID -DRTWS_SECRET_KEY=$RTWS_SECRET_KEY -DINTERNAL_IP=$INTERNAL_IP -DRTWS_FQDN=$RTWS_FQDN -DRTWS_DOMAIN=$RTWS_DOMAIN -Dlog4j.configuration=file:///usr/local/rtws/transport/conf/log4j.properties"
+
+# Configure the lib path per configured plugins
+./load_plugins.py
+
+# Run the pre-start script (if applicable)
+if [ -f /usr/local/rtws/transport/bin/env/pre_start ]; then
+	chmod +x /usr/local/rtws/transport/bin/env/pre_start
+		
+	if [ -a /etc/os-release ]; then
+		fromdos /usr/local/rtws/transport/bin/env/pre_start
+	else	
+		dos2unix /usr/local/rtws/transport/bin/env/pre_start
+	fi
+		
+	/usr/local/rtws/transport/bin/env/pre_start
+fi
+
+# Startup the transport
+exec java $RTWS_TRANSPORT_OPTIONS -cp "../lib/*" com.deleidos.rtws.transport.TransportManager ../conf/transports.default.xml

@@ -1,0 +1,9 @@
+--- 
+  - name: DigitalEdge release pre-download setup
+    command: mkdir -p {{ rtws_appfs }}/models/{{ rtws_system }}
+   
+  - name: Download DigitalEdge data model(s) to be used by this appliance
+    shell: s3cmd -c {{ rtws_home }}/.s3cfg get --force s3://{{ rtws_release_bucket }}/{{ rtws_release }}/models/{{ rtws_system }}/* {{ rtws_appfs }}/models/
+    
+  - name: Ensure correct permissions on {{ rtws_appfs }}/models
+    file: path={{ rtws_appfs }}/models owner=rtws group=rtws mode=0755 state=directory recurse=yes

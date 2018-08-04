@@ -1,0 +1,15 @@
+--- 
+  - name: DigitalEdge release pre-download setup
+    command: mkdir -p {{ rtws_appfs }}/models/{{ rtws_system }}
+   
+  - name: Download DigitalEdge data model(s) to be used by this appliance based on those listed in the system's config json from {{ rtws_release_bucket }}/{{ rtws_release }}/models/{{ rtws_system }}
+    shell: cat {{ rtws_appfs }}/configuration/{{ rtws_system }}/userConfig.json | /usr/local/bin/jq '.dataModels[]' | tr -d '"'
+    register: models
+    
+  - shell: AWS_ACCESS_KEY_ID={{ aws_access_key }} AWS_SECRET_ACCESS_KEY={{ aws_secret_key }} aws s3 cp --only-show-errors s3://{{ rtws_release_bucket }}/{{ rtws_release }}/models/{{ rtws_system }}/{{ item }} {{ rtws_appfs }}/models/{{ item }} 
+    with_items: "{{models.stdout_lines}}"
+    
+  - name: Ensure correct permissions on {{ rtws_appfs }}/models
+    file: path={{ rtws_appfs }}/models owner=rtws group=rtws mode=0755 state=directory recurse=yes
+    
+  - include: cleanup.yml

@@ -1,0 +1,44 @@
+---
+  - name: Adding the 10gen ubuntu repo signature key
+    apt_key: id=7F0CEB10 url=http://docs.mongodb.org/10gen-gpg-key.asc state=present
+    when: ansible_distribution == 'Ubuntu'
+  
+  - name: Configuring the 10gen ubuntu repo
+    apt_repository: repo='deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen' state=present update_cache=yes
+    when: ansible_distribution == 'Ubuntu'
+  
+  - name: Install MongoDB for Ubuntu
+    apt: pkg=mongodb-10gen state=installed
+    notify:
+      - stop mongodb
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Copy mongo.repo
+    copy: src=mongo.repo dest=/etc/yum.repos.d/mongodb.repo owner=root group=root mode=0444
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+    
+  - name: Install MongoDB for CentOS
+    shell: yum -y install mongo-10gen mongo-10gen-server --exclude mongodb-org,mongodb-org-server
+    notify:
+      - stop mongodb-10gen
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+    
+  - name: Configure mongo to use /mnt/rdafs for database persistence
+    shell: perl -i -pe 's/\/var\/lib\/mongodb/\/mnt\/rdafs\/mongodb/g' /etc/mongodb.conf
+    
+  - name: Create mongodb data directory
+    command: mkdir -p /mnt/rdafs/mongodb
+    args:
+      creates: /mnt/rdafs/mongodb
+      
+  - name: Ensure correct permissions on /mnt/rdafs/mongodb
+    file: path=/mnt/rdafs/mongodb owner=mongodb group=mongodb state=directory recurse=yes
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Ensure correct permissions on /mnt/rdafs/mongodb
+    file: path=/mnt/rdafs/mongodb owner=mongod group=mongod state=directory recurse=yes
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'   
+  
+  - name: Logs cleanup
+    shell: find /var/log/mongodb -type f -exec rm -f {} \;
+    ignore_errors: yes

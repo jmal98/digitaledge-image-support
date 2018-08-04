@@ -1,0 +1,38 @@
+---
+  # Split out creating users and their home directories due to bug when running a centos host and a ubuntu
+  # docker container.  Reference: http://www.fewbytes.com/docker-selinux-and-the-myth-of-kernel-indipendence/
+  - name: Adding the elasticsearch group
+    group: name=elasticsearch gid=1005 state=present
+      
+  - name: Adding the elasticsearch user
+    user: name=elasticsearch uid=1005 shell=/bin/bash createhome=no state=present group=elasticsearch groups=
+    
+  - file: path=/home/elasticsearch owner=elasticsearch group=elasticsearch mode=0644 state=directory
+    
+  - name: Adding the Elasticsearch ubuntu repo signature key
+    apt_key: url=http://packages.elasticsearch.org/GPG-KEY-elasticsearch state=present
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Adding the Elasticsearch centos repo signature key
+    shell: rpm --import https://packages.elastic.co/GPG-KEY-elasticsearch
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+    
+  - name: Configuring the Elasticsearch ubuntu repo
+    apt_repository: repo='deb http://packages.elasticsearch.org/elasticsearch/1.4/debian stable main' state=present update_cache=no
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Configuring the Elasticsearch centos repo
+    copy: src=elastic.repo dest=/etc/yum.repos.d/elasticsearch.repo owner=root group=root mode=0644 force=yes
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+    
+  - name: Install elasticsearch
+    apt: pkg=elasticsearch=1.4.4 state=installed update_cache=true
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Install elasticsearch
+    yum: name=elasticsearch-1.4.4-1 state=installed
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+    
+  - name: Disable auto start of Elasticsearch (ignore errors for case where building a centos Docker image which does not contain sysv or systemd init capabilities)
+    service: name=elasticsearch state=stopped enabled=no
+    ignore_errors: yes

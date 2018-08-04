@@ -1,0 +1,19 @@
+FROM digitaledge/SYSTEM_RELEASE_AND_TAG_PLACEHOLDER
+
+RUN mkdir -p $PLAYBOOK
+
+ADD activemq.tar.gz $PLAYBOOK/
+
+RUN ansible-playbook $PLAYBOOK/activemq/site.yml -c local --tags "users,install"
+
+EXPOSE 61616 61617 8161 1099
+
+RUN chown -R activemq:activemq /mnt/rdafs
+
+VOLUME ["/mnt/rdafs"]
+
+USER activemq
+
+WORKDIR /usr/local/apache-activemq
+
+CMD ["/sbin/bootstrap"]	

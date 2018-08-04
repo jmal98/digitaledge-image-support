@@ -1,0 +1,109 @@
+#!/bin/bash
+
+#
+# Setups the activemq JVM heap size and MemoryUsage values, then starts activemq.
+# Assumes the following volumes are mounted into the container:
+#		/mnt/rdafs
+# 		/mnt/appfs/configuration/$RTWS_DOMAIN
+
+ansible-playbook /tmp/.pbook/activemq/site.yml -c local --tags "pre-start"
+
+if [ $? -ne 0 ]; then
+   echo "Pre-start failed, exiting."
+   exit 1
+fi
+
+source /etc/rtwsrc
+
+#65% of total memory will be used in activemq config,mem size in mb
+totalMemory=`free -m | grep "^Mem" | awk '{print $2}'`
+if [ ! -z $RTWS_CONTAINER_MAX_MEMORY ]; then
+   echo "Using $RTWS_CONTAINER_MAX_MEMORY for total memory available."
+   totalMemory=$RTWS_CONTAINER_MAX_MEMORY
+fi
+echo "Total memory available on the system $totalMemory"
+
+#we give activeMQ 60% of total available memory
+mqmem=60
+
+size=`expr \( \( $totalMemory \* $mqmem \) / 100 \)`
+# Ensure there is enough memory left over for JVM C (non-heap, non-permgen, non-codecache) memory and the OS
+remaining=`expr $totalMemory - $size`
+if [ $remaining -lt 768 ]; then
+    swapon -a
+    size=`expr $totalMemory - 768`
+fi
+
+echo "$mqmem% of total memory, available memory to be used in activemq $size"
+
+#the 65% of the total memory in size will now be the 100% that we take memory from
+#now take 43% of that memory for the memory usage size
+memsize=`expr \( $size \* 43 \) / 100`
+
+#jvmsize to use the size calculated
+jvmsize=$size
+
+echo "43% of memory available for activemq (MemoryUsage) $memsize"
+echo "memory available for activemq (JVM Heap) $jvmsize"
+
+echo "JVM availabe heap size $jvmsize"
+
+#set activemq ENV var for activemq.xml to read
+export MEMORY_USAGE="$memsize mb"
+echo "activemq memoryusage size argument $memsize mb"
+
+#Calculate volume usage size on the fly, take the size of attached/mounted volumes in the raid and then give 80% to activemq
+
+#get total raid size for attached volumes
+totalVolumeSize=`df -m $RTWS_RAID_PATH | tail -1 | awk '{print $2}'`
+
+if [ -z $totalVolumeSize ]; then
+	echo "ERROR: failed to calculate size of $RTWS_RAID_PATH"
+	exit 1
+fi
+
+echo "Total raid/volume size available on instance $totalVolumeSize"
+
+#calculate activemq disk usage size, take 80% of total volume size
+diskSize=`expr \( \( $totalVolumeSize \* 80 \) / 100 \) - 128`
+
+#set environment variable, activemq config will read value and set for process
+export DISK_USAGE="$diskSize mb"
+echo "activemq diskusage size argument $diskSize"
+
+# compute size of the eden+survivor space
+newsize=`expr $size / 3`
+echo "activemq eden+survivor size $newsize"
+
+# compute size of the code cache
+codesize=`expr \( \( $totalMemory \* 3 \) / 100 \)`
+if [ $codesize -gt 192 ]; then
+    codesize=128;
+elif [ $codesize -gt 96 ]; then
+    codesize=64;
+else
+    codesize=32;
+fi
+
+echo "Total memory for code cache: $codesize"
+
+export METRICS_PORT=9103
+if [ "$RTWS_PROCESS_GROUP" == "jms.internal" ]; then
+	export METRICS_PORT=9105
+fi
+
+echo ACTIVEMQ_OPTS_MEMORY=\"-javaagent:/usr/local/apache-activemq/lib/optional/jmx_prometheus_javaagent-0.5.jar=$METRICS_PORT:/usr/local/apache-activemq/conf/jmx_exporter.yml -XX:+UseParallelOldGC -XX:-UseAdaptiveSizePolicy -XX:InitialCodeCacheSize=$codesize'm' -XX:ReservedCodeCacheSize=$codesize'm' -XX:NewSize=$newsize'm' -XX:MaxNewSize=$newsize'm' -XX:SurvivorRatio=2 -XX:PermSize=128m -XX:MaxPermSize=128m -Xms${jvmsize}M -Xmx${jvmsize}M\" > /etc/default/activemq
+echo "JAVA_HOME=/usr/lib/jvm/jre/" >> /etc/default/activemq
+
+ulimit -n 20480
+
+COMMONS_CORE_LIB_DIR=/usr/local/rtws/commons-core/lib/
+cp $COMMONS_CORE_LIB_DIR/bcprov*.jar /usr/local/apache-activemq/lib/optional/
+chown activemq:activemq /usr/local/apache-activemq/lib/optional/bcprov*.jar
+chmod 777 /usr/local/apache-activemq/lib/optional/bcprov*.jar
+COMMONS_CONFIG_JAR=$COMMONS_CORE_LIB_DIR/`ls $COMMONS_CORE_LIB_DIR | grep deleidos-rtws-commons-config-.*.jar`
+export ACTIVEMQ_ENCRYPTION_PASSWORD=`java -Xmx10m -cp $COMMONS_CONFIG_JAR  com.deleidos.rtws.commons.config.EncryptorUtil`
+cp /tmp/certs/activemq.xml /usr/local/apache-activemq/conf/
+
+
+/usr/local/apache-activemq/bin/activemq console

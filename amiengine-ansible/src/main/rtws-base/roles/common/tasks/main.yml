@@ -1,0 +1,65 @@
+---
+  - name: Install base set of required packages
+    apt: pkg={{ item }} state=installed update_cache=false
+    when: ansible_distribution == 'Ubuntu'
+    with_items:
+      - curl
+      - wget
+      - ntp
+      - zip
+      - unzip
+      - tofrodos
+      - git
+      - net-tools
+      
+  - name: Install base set of required packages
+    yum: pkg={{ item }} state=installed
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+    with_items:
+      - curl
+      - wget
+      - ntp
+      - zip
+      - unzip
+      - dos2unix
+      - git
+      - net-tools
+      - patch
+      - mdadm
+      - initscripts
+      - sudo
+      - tar
+      
+  - name: disable requiretty
+    replace: dest=/etc/sudoers owner=root group=root mode=0440 regexp='Defaults    requiretty' replace='#Defaults    requiretty'
+              backup=yes validate='visudo -cf %s'
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+      
+  - name: Setup softlink to allow fromdos to work on centos
+    shell: ln -sf /bin/dos2unix /bin/fromdos
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+      
+  - name: Remove Ubuntu / CentOS Error Reporting
+    apt: pkg=whoopsie state=absent update_cache=false
+    when: ansible_distribution == 'Ubuntu'
+     
+  - name: Create {{ rtws_home }}
+    file: path={{ rtws_home }} owner=rtws group=rtws mode=0775 state=directory recurse=yes
+      
+  - template: src=rtwsrc.j2 dest=/etc/rtwsrc owner=root group=root mode=0644
+  
+  - name: Allow Ubuntu's boot process to automatically fix disk inconsistencies during boot  (which happens when importing ovf to vmware all the time...)
+    replace: dest=/etc/default/rcS regexp='FSCKFIX=no' replace='FSCKFIX=yes' backup=yes
+    when: ansible_distribution == 'Ubuntu'
+  
+  - stat: path=/etc/sysconfig/autofsck
+    register: autofsck_st 
+    
+  - name: Allow CentOS's boot process to automatically fix disk inconsistencies during boot  (which happens when importing ovf to vmware all the time...)
+    replace: dest=/etc/sysconfig/autofsck regexp='AUTOFSCK_DEF_CHECK=no' replace='AUTOFSCK_DEF_CHECK=yes' backup=yes
+    when: autofsck_st.stat.exists   
+    
+  - name: Installing jq
+    shell: wget -O /usr/local/bin/jq http://stedolan.github.io/jq/download/linux64/jq
+    
+  - command: chmod +x /usr/local/bin/jq

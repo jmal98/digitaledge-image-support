@@ -1,0 +1,29 @@
+---
+  # Catchall for misc cleanup actions after all applicable roles run, but leave artifacts 
+  # used by other roles (like the s3cmd cfg)
+  
+  - file: path={{ rtws_home }}/.s3cfg state=absent recurse=no
+    
+  - name: Remove package cache
+    shell: apt-get -y clean autoclean
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Remove package cache
+    shell: yum -y clean all
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+    
+  - name: Clear out Ubuntu passwords
+    shell: passwd -d ubuntu    
+    when: ansible_distribution == 'Ubuntu'
+
+  - name: Clear out CentOS passwords
+    shell: passwd -d centos    
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat' 
+    
+  - name: Remove all authorized keys
+    shell: find / -name authorized_keys -type f -exec rm -fv {} \;
+    ignore_errors: yes 
+    
+  - name: Remove shell history
+    shell: find /root/.*history /home/*/.*history -type f -exec rm -fv {} \;
+    ignore_errors: yes

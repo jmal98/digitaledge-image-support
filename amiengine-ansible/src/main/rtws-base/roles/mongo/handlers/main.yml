@@ -1,0 +1,10 @@
+---
+  - name: stop mongodb
+    service: name=mongodb state=stopped enabled=no
+    
+  - name: stop mongodb-10gen
+    service: name=mongod state=stopped enabled=no
+  
+  - name: logs cleanup
+    shell: find /var/log/mongodb -type f -exec rm -f {} \;
+    ignore_errors: yes

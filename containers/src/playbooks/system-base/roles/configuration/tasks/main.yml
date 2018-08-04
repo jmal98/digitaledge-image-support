@@ -1,0 +1,55 @@
+---
+  - template: src=rtwsrc.j2 dest=/etc/rtwsrc owner=rtws group=rtws mode=0644 force=yes 
+  
+  - file: path={{ rtws_appfs }}/configuration/{{ rtws_system }} owner=rtws group=rtws mode=0775 state=directory recurse=yes
+    
+  - name: Download DigitalEdge configuration components
+    shell: AWS_ACCESS_KEY_ID={{ aws_access_key }} AWS_SECRET_ACCESS_KEY={{ aws_secret_key }} aws s3 cp --only-show-errors s3://{{ rtws_release_bucket }}/{{ rtws_release }}/configuration/{{ rtws_system }}/{{ item }} {{ rtws_appfs }}/configuration/{{ rtws_system }}/{{ item }}
+    with_items:
+      - deleidos-rtws-activemq-conf.tar.gz
+      - deleidos-rtws-transport-conf.tar.gz
+      - deleidos-rtws-ingest-conf.tar.gz
+      - deleidos-rtws-common-properties-conf.tar.gz
+      - deleidos-rtws-common-conf-conf.tar.gz
+      - deleidos-rtws-jms-router-conf.tar.gz
+      - deleidos-rtws-master-conf.tar.gz
+      - userConfig.json
+   
+  # Extract appliance startup files then delete the master config 
+  - name: Extract the appliance bootstrap scripts
+    command: tar -C {{ rtws_appfs }}/configuration/{{ rtws_system }} -xzvf {{ rtws_appfs }}/configuration/{{ rtws_system }}/deleidos-rtws-master-conf.tar.gz {{ item }} creates={{ rtws_appfs }}/configuration/{{ rtws_system }}/{{ item }}
+    with_items:
+      - zfs.create
+      - docker.volumes.create
+      - docker.run
+      - docker.run.with.volumes      
+  
+  - file: path={{ rtws_appfs }}/configuration/{{ rtws_system }}/deleidos-rtws-master-conf.tar.gz state=absent 
+  
+  - name: Ensure correct permissions on {{ rtws_appfs }}/configuration
+    file: path={{ rtws_appfs }}/configuration owner=rtws group=rtws mode=0755 state=directory recurse=yes  
+  
+  # The usual setup for properties     
+  - file: path=/usr/local/rtws/properties owner=rtws group=rtws mode=0775 state=directory recurse=no
+    
+  - unarchive: src={{ rtws_appfs }}/configuration/{{ rtws_system }}/deleidos-rtws-common-properties-conf.tar.gz dest=/usr/local/rtws/properties
+  
+  - file: path={{ rtws_appfs }}/configuration/{{ rtws_system }}/deleidos-rtws-common-properties-conf.tar.gz state=absent   
+
+  - file: path=/usr/local/rtws/conf owner=rtws group=rtws mode=0775 state=directory recurse=no
+  
+  
+  
+    
+  - unarchive: src={{ rtws_appfs }}/configuration/{{ rtws_system }}/deleidos-rtws-common-conf-conf.tar.gz dest=/usr/local/rtws/conf
+  
+  - file: path={{ rtws_appfs }}/configuration/{{ rtws_system }}/deleidos-rtws-common-conf-conf.tar.gz state=absent
+    
+  - name: Setting APPLIANCE_DB_HOST to be gateway.{{ rtws_system }}
+    replace: dest=/usr/local/rtws/properties/rtws-common.properties regexp='APPLIANCE_DB_HOST' replace='gateway.{{ rtws_system }}' backup=no
+    
+
+
+
+  - name: Ensure /usr/local/rtws has the correct permissions
+    file: path=/usr/local/rtws owner=rtws group=rtws mode=0775 state=directory recurse=yes     

@@ -1,0 +1,57 @@
+---   
+  - name: Ensure correct permissions on {{ rtws_home }}
+    file: path={{ rtws_home }}/boot owner=rtws group=rtws mode=0775 state=directory recurse=yes
+    
+  - name: Download DigitalEdge boot artifacts
+    s3: bucket={{ rtws_release_bucket }} object=/{{ rtws_release }}/release/deleidos-rtws-commons-core-dist-boot.tar.gz dest=/tmp/deleidos-rtws-commons-core-dist-boot.tar.gz mode=get aws_access_key={{ aws_access_key }} aws_secret_key={{ aws_secret_key }}
+    
+  - name: Unpack DigitalEdge boot artifacts
+    unarchive: src=/tmp/deleidos-rtws-commons-core-dist-boot.tar.gz dest=/tmp
+    
+  - file: path=/tmp/deleidos-rtws-commons-core-dist-boot.tar.gz state=absent recurse=no
+  
+  - name: Remove windows characters from DigitalEdge boot artifacts
+    shell: fromdos /tmp/*.sh /tmp/*.txt /tmp/*.pl /tmp/*.xml /tmp/*.c 
+  
+  - name: Install DigitalEdge boot artifacts
+    shell: mv /tmp/rtws*.sh {{ rtws_home }}/boot; mv /tmp/rtws*.xml {{ rtws_home }}/boot; mv /tmp/rtws*.pl {{ rtws_home }}/boot ; tar -C /usr/local/rtws/boot/ -xzvf /tmp/deleidos-rtws-commons-core-dist-boot.tar.gz .s3cfg; fromdos /usr/local/rtws/boot/.s3cfg; chown -R root:root {{ rtws_home }}/boot; chmod -R 755 {{ rtws_home }}/boot/*
+    
+  - name: Install legacy ubuntu profile template
+    shell: cat /tmp/profile_template.txt >> /home/{{ item }}/.profile
+    with_items:
+      - ubuntu
+      - rtws
+    when: ansible_distribution == 'Ubuntu'
+      
+  - name: Install legacy centos profile template
+    shell: cat /tmp/profile_template.txt >> /home/{{ item }}/.profile
+    with_items:
+      - centos
+      - rtws
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+      
+  - name: Install legacy rtws_start.sh boot artifact
+    shell: ln -s {{ rtws_home }}/boot/rtws_init.sh ; update-rc.d rtws_init.sh defaults 95 05
+    args:
+      chdir: /etc/init.d
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Install legacy rtws_start.sh boot artifact
+    shell: ln -s {{ rtws_home }}/boot/rtws_init.sh ; chkconfig --add rtws_init.sh
+    args:
+      chdir: /etc/init.d
+    when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+      
+  - name: Patch s3cmd with change for eucalyptus support with the patch from the release
+    shell: patch -p1 < /tmp/s3cmd-1.0.0-patch.txt
+    args:
+      chdir: /usr/local/s3cmd
+      
+  # Cleanup  
+  - file: path=/tmp/.s3cfg state=absent recurse=no
+  
+  - file: path=/tmp/s3cmd-1.0.0-patch.txt state=absent recurse=no
+  
+  - file: path=/tmp/profile_template.txt state=absent recurse=no
+  
+  - file: path=/tmp/a_strnid.c state=absent recurse=no

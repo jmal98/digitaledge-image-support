@@ -1,0 +1,8 @@
+---
+  - include: rtwsrc.yml
+  
+  - name: Update log4j properties to point to the desired syslog reciever
+    replace: dest=/usr/local/rtws/transport/conf/log4j.properties regexp='log4j.appender.syslog.SyslogHost=localhost' replace='log4j.appender.syslog.SyslogHost={{ appliance_syslog_host }}' backup=no
+    
+  
+  #- include: config_modifications.yml

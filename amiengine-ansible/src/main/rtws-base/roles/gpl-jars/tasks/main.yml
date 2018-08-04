@@ -1,0 +1,12 @@
+---      
+  - name: Create GPLV lib directory
+    file: path={{ rtws_home }}/boot/lib owner=rtws group=rtws mode=0775 state=directory recurse=yes
+    
+  - name: Download LGPL libs which must be on the image.  Jars are used by appliable enrichments
+    get_url: url={{ item }} dest=/usr/local/rtws/boot/lib
+    with_items:
+      - http://repo1.maven.org/maven2/uk/ac/gate/gate-asm/3.1/gate-asm-3.1.jar
+      - http://repo1.maven.org/maven2/uk/ac/gate/gate-compiler-jdt/3.7.1/gate-compiler-jdt-3.7.1.jar
+      - http://repo1.maven.org/maven2/uk/ac/gate/gate-core/6.1/gate-core-6.1.jar
+      - http://repo1.maven.org/maven2/com/vividsolutions/jts/1.11/jts-1.11.jar
+      - http://repo1.maven.org/maven2/xom/xom/1.2.5/xom-1.2.5.jar

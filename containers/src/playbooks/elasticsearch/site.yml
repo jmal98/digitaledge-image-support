@@ -1,0 +1,15 @@
+---
+- hosts: all
+  vars:
+    rtws_home: /usr/local/rtws
+    rtws_appfs: /mnt/appfs
+    rtws_release_bucket: RTWS_BUCKET
+    rtws_system: RTWS_APPLIANCE_SYSTEM
+    rtws_release: RTWS_RELEASE
+    playbook_home: /tmp/.pbook
+    # ES_HEAP_SIZE needs to be: 7g, 1g, 512m, etc....
+    es_heap_size: "{{ lookup('env','ES_HEAP_SIZE') | default('256m',true) }}"
+    
+  roles:
+  - { role: install, tags: ['install'] }
+  - { role: pre-start, tags: ['pre-start'] }

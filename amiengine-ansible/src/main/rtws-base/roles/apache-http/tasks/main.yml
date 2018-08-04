@@ -1,0 +1,29 @@
+---
+  # TODO add support (if necessary) for running in a AWS Centos System...
+  - name: Install Apache HTTP
+    apt: pkg=apache2 state=installed update_cache=yes force=yes
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Install mod-auth-cas plugin
+    apt: pkg=libapache2-mod-auth-cas state=installed update_cache=yes force=yes
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Enable ssl
+    shell: a2enmod ssl
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Enable proxy
+    shell: a2enmod proxy
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Enable proxy_http
+    shell: a2enmod proxy_http
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Enable auth_cas
+    shell: a2enmod auth_cas
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Disable auto start of apache
+    service: name=apache2 state=stopped enabled=no
+    when: ansible_distribution == 'Ubuntu'

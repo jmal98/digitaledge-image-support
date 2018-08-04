@@ -1,0 +1,76 @@
+---  
+  - file: path={{ item }} owner=rtws group=rtws mode=0755 state=directory recurse=yes
+    with_items:
+      - /usr/local/rtws/ingest/logs
+      - /usr/local/rtws/ingest/scripts
+      - /usr/local/rtws/ingest/models
+      - /tmp/ingest/lib
+      - /tmp/ingest/scripts      
+  
+  - name: Mimicking content downloader setup since there isn't a master with a repository
+    unarchive: src=repo.zip dest={{ rtws_appfs }}/services/ owner=rtws group=rtws
+    
+  - shell: cp -fv {{ rtws_appfs }}/models/*.zip /usr/local/rtws/ingest/models/.
+    
+  - file: path={{ rtws_home }}/ingest/conf owner=rtws group=rtws state=directory recurse=yes 
+  
+  - file: path={{ rtws_home }}/ingest/bin owner=rtws group=rtws state=directory recurse=yes
+  
+  - unarchive: src={{ rtws_appfs }}/release/{{ rtws_release }}/deleidos-rtws-ingest.tar.gz dest=/usr/local/rtws
+  
+  - unarchive: src={{ rtws_appfs }}/configuration/{{ rtws_system }}/deleidos-rtws-ingest-conf.tar.gz dest={{ rtws_home }}/ingest/conf
+    
+  - name: Setup ingest scratch area used by their run scripts
+    shell: mkdir -p /tmp/{{ item }}/lib/plugin-dependencies   
+    with_items:
+      - ingest
+      
+  - name: Link common root uploaded services to area used by ingest run scripts
+    shell: find /mnt/appfs/services/*snapshot*/common/services -type f -maxdepth 1 | xargs -n 1 -I {} ln -sf {} /tmp/ingest/lib/.
+      
+  - name: Link common services to area used by ingest run scripts
+    shell: find /mnt/appfs/services/*snapshot*/common/services/{{ item }} -type f | xargs -n 1 -I {} ln -sf {} /tmp/ingest/lib/.
+    with_items:
+      - enrichments
+      - parsers
+      - datasinks
+
+  - name: Link private services to area used by ingest (top level)
+    shell: find /mnt/appfs/services/*snapshot*/private/*/services -type f -maxdepth 1 | xargs -n 1 -I {} ln -sf {} /tmp/ingest/lib/.
+    ignore_errors: yes
+
+  - name: Link private services to area used by ingest run scripts
+    shell: find /mnt/appfs/services/*snapshot*/private/*/services/{{ item }} -type f | xargs -n 1 -I {} ln -sf {} /tmp/ingest/lib/.
+    with_items:
+      - enrichments
+      - parsers
+      - datasinks
+    ignore_errors: yes
+  
+  - shell: chmod a+x {{ rtws_home }}/ingest/bin/*.sh
+  
+  - shell: chmod a+x {{ rtws_home }}/ingest/bin/*.py
+  
+  - shell: dos2unix {{ rtws_home }}/ingest/bin/*.sh
+  
+  - shell: dos2unix {{ rtws_home }}/ingest/bin/*.py
+    
+  - name: Ensure correct permissions 
+    file: path={{ rtws_appfs }}/{{ item }} owner=rtws group=rtws mode=0755 state=directory recurse=yes
+    with_items:
+      - release
+      - services
+      
+  - copy: src=bootstrap dest=/sbin/bootstrap owner=rtws group=rtws mode=0544 force=yes
+      
+  - file: path={{ rtws_home }} owner=rtws group=rtws mode=0755 state=directory recurse=yes
+  
+  - file: path=/tmp/pg/setup owner=rtws group=rtws state=directory recurse=yes
+  - name: Link common process group setup zips
+    shell: find /mnt/appfs/services/common/services/processgroupsetup -type f | xargs -n 1 -I {} ln -sf {} /tmp/pg/setup/.
+    
+  - name: Link private process group setup zips (ignoring errors as private plugins are optional)
+    shell: find /mnt/appfs/services/private/services/processgroupsetup -type f | xargs -n 1 -I {} ln -sf {} /tmp/pg/setup/.
+    ignore_errors: yes
+      
+  - include: cleanup.yml

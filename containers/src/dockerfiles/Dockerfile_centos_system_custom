@@ -1,0 +1,21 @@
+FROM digitaledge/SYSTEM_RELEASE_AND_TAG_PLACEHOLDER
+
+RUN mkdir -p $PLAYBOOK
+
+ADD custom.tar.gz $PLAYBOOK/
+
+ADD params.yml $PLAYBOOK/custom/
+
+COPY repo.zip $PLAYBOOK/custom/roles/install/files/
+
+RUN ansible-playbook $PLAYBOOK/custom/site.yml -c local --tags "install"
+
+RUN chown -R rtws:rtws /mnt/rdafs
+
+VOLUME ["/mnt/rdafs"]
+
+EXPOSE 1099
+
+WORKDIR /usr/local/rtws/ingest/bin
+
+CMD ["/sbin/bootstrap"]	

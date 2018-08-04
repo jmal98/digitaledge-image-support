@@ -1,0 +1,43 @@
+---      
+  - name: Remove package version of s3cmd in favor of installing from tar.gz for patching for Walrus
+    apt: pkg=s3cmd state=absent update_cache=false
+    when: ansible_distribution == 'Ubuntu'
+      
+  - name: Temporary workaround for idempotent execution of this task related to repeat calls to path causing a failure
+    shell: rm -rf /usr/local/s3cmd
+    args:
+      removes: /usr/local/s3cmd
+      
+  - name: Download s3cmd (ver 1.0.0)
+    shell: wget -O /tmp/s3cmd-1.0.0.tar.gz http://downloads.sourceforge.net/project/s3tools/s3cmd/1.0.0/s3cmd-1.0.0.tar.gz 
+    args:
+       creates: /tmp/s3cmd-1.0.0.tar.gz
+  
+  # TODO fix this to work when running in local mode (e.g. -c local)
+  #- copy: src=s3cmd-1.0.0.tar.gz dest=/tmp/s3cmd-1.0.0.tar.gz owner=root group=root mode=0444
+  
+  - shell: tar -tzvf /tmp/s3cmd-1.0.0.tar.gz
+  
+  - command: mkdir -p /usr/local/s3cmd creates=/usr/local/s3cmd
+      
+  - name: Unpack s3cmd
+    unarchive: src=/tmp/s3cmd-1.0.0.tar.gz dest=/usr/local/s3cmd
+  
+  - name: Pre-install s3cmd to additional location
+    shell: mv /usr/local/s3cmd/s3cmd-1.0.0/* . ; rmdir s3cmd-1.0.0
+    args:
+      chdir: /usr/local/s3cmd
+      creates: /usr/local/s3cmd/s3cmd
+      
+  - name: Install s3cmd
+    command: ln -sf /usr/local/s3cmd/s3cmd /usr/bin/s3cmd
+    args:
+      chdir: /usr/bin
+      creates: /usr/bin/s3cmd
+      
+  - template: src=s3cfg.j2 dest=/{{ rtws_home }}/.s3cfg owner=root group=root mode=0644
+  
+  - name: Delete s3cmd tarball used for install
+    command: rm -f /tmp/s3cmd-1.0.0.tar.gz
+    args:
+      removes: /tmp/s3cmd-1.0.0.tar.gz

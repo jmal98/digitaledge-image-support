@@ -1,0 +1,6 @@
+---
+  - include: jms-external.yml
+    when: rtws_process_group == 'jms.external'
+  
+  - include: jms-internal.yml
+    when: rtws_process_group == 'jms.internal'

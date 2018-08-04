@@ -1,0 +1,66 @@
+#!/bin/bash
+
+ansible-playbook /tmp/.pbook/ingest/site.yml -c local --tags "pre-start"
+
+if [ $? -ne 0 ]; then
+   echo "Pre-start failed, exiting."
+   exit 1
+fi
+
+source /etc/rtwsrc
+
+totalMemory=`free -m | grep "^Mem" | awk '{print $2}'`
+if [ ! -z $RTWS_CONTAINER_MAX_MEMORY ]; then
+	echo "Using $RTWS_CONTAINER_MAX_MEMORY for total memory available."
+	totalMemory=$RTWS_CONTAINER_MAX_MEMORY
+fi
+echo "Total memory available on the system $totalMemory"
+
+jvmsize=`expr \( \( $totalMemory \* 75 \) / 100 \) - 128`
+echo "JVM available heap size $jvmsize"
+
+
+ct=$(grep -wc "rtws.cloud.provider=APPLIANCE" /usr/local/rtws/properties/rtws-common-properties)
+if [ $ct >= 1 ]; then
+    # TODO revisit this if/when the container's ip is not the first entry in /etc/hosts
+   INTERNAL_IP="$(cat /etc/hosts | grep -v "#" | head -1 | awk '{print $1 }')"
+else
+   INTERNAL_IP=`curl -s -f http://169.254.169.254/latest/meta-data/local-ipv4`
+fi
+
+RTWS_INGEST_OPTIONS="-DRTWS_ROOT_LOG_LEVEL=$RTWS_ROOT_LOG_LEVEL -DRTWS_APP_LOG_LEVEL=$RTWS_APP_LOG_LEVEL -DRTWS_ACCESS_KEY=$RTWS_ACCESS_KEY -DRTWS_TENANT_ID=$RTWS_TENANT_ID -DRTWS_SECRET_KEY=$RTWS_SECRET_KEY -DINTERNAL_IP=$INTERNAL_IP -DRTWS_FQDN=$RTWS_FQDN -DRTWS_DOMAIN=$RTWS_DOMAIN -DRTWS_ZOOKEEPER_QUORUM_SERVERS=$RTWS_ZOOKEEPER_QUORUM_SERVERS"
+
+RTWS_INGEST_CONTENT_DOWNLOADER_CONFIG="../conf/ingest-content-downloader.xml"
+
+if [[ ! -z "$(echo $RTWS_PROCESS_GROUP | grep datasink)" ]]; then
+	RTWS_INGEST_CONTENT_DOWNLOADER_CONFIG="../conf/ingest-content-downloader-datasinks.xml"
+fi
+
+# Download the services and scripts into a temp directory
+java -Dlog4j.configuration=file:///usr/local/rtws/ingest/conf/log4j.properties $RTWS_INGEST_OPTIONS -cp "../lib/*"  com.deleidos.rtws.tools.repository.IngestContentDownloader $RTWS_INGEST_CONTENT_DOWNLOADER_CONFIG 30
+
+# Configure the lib path per configured plugins
+./load_plugins.py
+
+# Run the pre-start script (if applicable) if not on ingest.all
+if [ "$RTWS_PROCESS_GROUP" != "ingest.all" ]; then
+	if [ -f /usr/local/rtws/ingest/bin/env/pre_start ]; then
+		chmod +x /usr/local/rtws/ingest/bin/env/pre_start
+		
+		if [ -a /etc/os-release ]; then
+			fromdos /usr/local/rtws/ingest/bin/env/pre_start
+		else	
+			dos2unix /usr/local/rtws/ingest/bin/env/pre_start
+		fi
+		
+		/usr/local/rtws/ingest/bin/env/pre_start
+	fi
+fi
+
+# Startup the ingest server
+
+# Specify the classpath in reverse order so that the RT config jars (hadoop-conf)
+#  is after the core hadoop jar (hadoop-core) to avoid issues
+#  This is hacky, but hey, it works for now.....
+CLASSPATH_MOD="$(find /usr/local/rtws/ingest/lib -name '*.jar' | sort -r | tr -s '\n' ':'):.:/etc/hive/conf/"
+exec java -Xmx${jvmsize}m -Dlog4j.configuration=file:///usr/local/rtws/ingest/conf/log4j.properties $RTWS_INGEST_OPTIONS -cp $CLASSPATH_MOD -Djava.library.path=../lib/native com.deleidos.rtws.core.framework.IngestManager ../conf/$RTWS_INGEST_CONFIG
