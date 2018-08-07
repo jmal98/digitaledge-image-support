@@ -1,8 +1,9 @@
 version: 2
-  jobs:
-    build:
-      docker:
-        - circleci/openjdk:8-jdk-browsers
-      steps:
-        - checkout
-        - run: ./mvnw clean
+jobs:
+  build:
+    docker:
+      - circleci/openjdk:8-jdk
+
+    steps:
+      - checkout
+      - run: ./mvnw clean
