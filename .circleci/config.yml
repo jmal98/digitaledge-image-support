@@ -8,7 +8,12 @@ jobs:
 
     steps:
       - checkout
-      
+
+      # TODO relocate to include Ansible dependency in custom image
+      - run: sudo apt update && sudo apt install python-setuptools python-dev python-yaml libssl-dev libffi-dev 
+
+      - run: sudo easy_install ansible==2.6.0
+
       # Download and cache dependencies
       - restore_cache:
           keys:
