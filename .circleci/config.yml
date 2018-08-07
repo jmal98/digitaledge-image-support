@@ -8,4 +8,24 @@ jobs:
 
     steps:
       - checkout
+      
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "digital-edge-image-support/pom.xml" }}
+          # fallback to using the latest cache if no exact match is found
+          - v1-dependencies-
+
+      # Ensure project reactor lines up
       - run: ./mvnw -f digital-edge-image-support/pom.xml clean
+
+      # Build
+      - run: ./mvnw -f digital-edge-image-support/pom.xml install -DskipTests
+
+      - save_cache:
+          paths:
+            - ~/.m2
+          key: v1-dependencies-{{ checksum "digital-edge-image-support/pom.xml" }}
+
+      # run tests!
+      - run: ./mvnw -f digital-edge-image-support/pom.xml test
