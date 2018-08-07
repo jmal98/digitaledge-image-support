@@ -8,4 +8,4 @@ jobs:
 
     steps:
       - checkout
-      - run: ./mvnw clean
+      - run: ./mvnw -f digitaledge-image-support/pom.xml clean
