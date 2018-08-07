@@ -10,7 +10,7 @@ jobs:
       - checkout
 
       # TODO relocate to include Ansible dependency in custom image
-      - run: sudo apt update && sudo apt install python-setuptools python-dev python-yaml libssl-dev libffi-dev 
+      - run: sudo apt update && sudo apt install python-setuptools python-dev python-yaml libssl-dev libffi-dev
 
       - run: sudo easy_install ansible==2.6.0
 
@@ -33,4 +33,11 @@ jobs:
           key: v1-dependencies-{{ checksum "digital-edge-image-support/pom.xml" }}
 
       # run tests!
+      - run: mkdir ~/repo/junit
+
       - run: ./mvnw -f digital-edge-image-support/pom.xml test
+
+      - run: find ~/repo/ -name 'TEST*.xml' | xargs -I {} cp -fv {} ~/repo/junit/.
+
+      - store_test_results:
+          path: ~/repo/junit
